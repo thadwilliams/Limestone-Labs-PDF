@@ -19,7 +19,7 @@ function applyBrand(root = document) {
 }
 // The credit Apache 2.0 copies of this project are asked to keep (see NOTICE and README).
 // Deliberately not a config.js setting.
-const SOURCE_URL = 'https://github.com/thadwilliams/LL_PDF';
+const SOURCE_URL = 'https://github.com/thadwilliams/Limestone-Labs-PDF';
 function credit() {
   const a = document.createElement('a');
   a.href = SOURCE_URL; a.target = '_blank'; a.rel = 'noopener'; a.textContent = 'open source from Limestone Labs';

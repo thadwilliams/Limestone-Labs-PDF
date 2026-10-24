@@ -4,7 +4,7 @@
   "description": "Free, self-hostable PDF editor with encrypted e-signing",
   "license": "Apache-2.0",
   "author": "Limestone Labs LLC (https://limestonelabs.cc)",
-  "repository": "github:thadwilliams/LL_PDF",
+  "repository": "github:thadwilliams/Limestone-Labs-PDF",
   "homepage": "https://pdf.limestonelabs.cc",
   "type": "module",
   "scripts": {

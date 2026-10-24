@@ -1,6 +1,6 @@
-# LL PDF
+# Limestone Labs PDF
 
-A free, open-source replacement for everyday Acrobat work, from [Limestone Labs](https://limestonelabs.cc). Edit PDFs, make fillable forms, redact, comment, run OCR on scans, and collect signatures from several people with a tamper-evident audit trail. It runs in any modern browser and installs as a desktop or phone app.
+LL PDF is a free, open-source replacement for everyday Acrobat work, from [Limestone Labs](https://limestonelabs.cc). Edit PDFs, make fillable forms, redact, comment, run OCR on scans, and collect signatures from several people with a tamper-evident audit trail. It runs in any modern browser and installs as a desktop or phone app.
 
 **Try it:** https://pdf.limestonelabs.cc
 
@@ -66,8 +66,8 @@ These are electronic signatures under the US ESIGN Act and state UETA laws, not 
 You need [Node.js](https://nodejs.org) 20 or newer. Then:
 
 ```
-git clone https://github.com/thadwilliams/LL_PDF.git
-cd LL_PDF
+git clone https://github.com/thadwilliams/Limestone-Labs-PDF.git
+cd Limestone-Labs-PDF
 npm install
 ```
 
@@ -131,7 +131,7 @@ There's no server code or database.
 [Claude Code](https://claude.com/claude-code) can set this up, deploy it and change it for you.
 
 1. Install Claude Code.
-2. Open a terminal in the `LL_PDF` folder and run `claude`.
+2. Open a terminal in the `Limestone-Labs-PDF` folder and run `claude`.
 3. Start with: *"Read README.md, SETUP.md and ARCHITECTURE.md first."*
 
 Then ask in plain English. For example:
