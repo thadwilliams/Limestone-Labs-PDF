@@ -1,0 +1,1748 @@
+<!doctype html>
+<!-- Copyright 2026 Limestone Labs LLC. SPDX-License-Identifier: Apache-2.0 -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LL PDF</title>
+<meta name="description" content="Free PDF editor that runs in your browser. Add and edit text, sign, fill forms, highlight, merge and rotate pages. Files never leave your computer.">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="site.webmanifest">
+<meta name="theme-color" content="#14141a">
+<script src="config.js"></script>
+<script src="brand.js"></script>
+<style>
+:root{--bg:#e9ebee;--panel:#fff;--ink:#1d2129;--muted:#667085;--line:#d0d5dd;--accent:#2563eb;--accent-weak:#dbe7ff;--danger:#c0362c}
+@media (prefers-color-scheme: dark){:root{--bg:#1b1d21;--panel:#26292e;--ink:#e6e8eb;--muted:#9aa1ab;--line:#3a3f46;--accent:#5b8cff;--accent-weak:#24365e;--danger:#ff6b5e}}
+*{box-sizing:border-box}
+[hidden]{display:none !important}   /* display rules like label.chk's must not override hidden */
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font:14px/1.4 system-ui,"Segoe UI",sans-serif;display:flex;flex-direction:column}
+header{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:6px 10px;background:var(--panel);border-bottom:1px solid var(--line)}
+.grp{display:flex;gap:3px;align-items:center;padding-right:8px;border-right:1px solid var(--line)}
+.grp:last-child{border-right:0}
+button,select,input[type=number]{font:inherit;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:4px 8px;cursor:pointer}
+button:hover:not(:disabled){border-color:var(--accent)}
+button.on{background:var(--accent-weak);border-color:var(--accent)}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+button:disabled{opacity:.45;cursor:default}
+input[type=number]{width:60px;cursor:text}
+input[type=color]{width:34px;height:30px;padding:0 2px;border:1px solid var(--line);border-radius:6px;background:var(--panel);cursor:pointer}
+label.chk{display:inline-flex;gap:5px;align-items:center;cursor:pointer;white-space:nowrap}
+.lbl{color:var(--muted);font-size:12px}
+#hint{flex-basis:100%;color:var(--muted);font-size:13px;min-height:19px;display:flex;gap:10px;align-items:center}
+#hint button{padding:1px 8px;font-size:12px}
+main{flex:1;display:flex;min-height:0}
+#side{width:156px;flex:none;overflow:auto;background:var(--panel);border-right:1px solid var(--line);padding:8px}
+#view{flex:1;overflow:auto;position:relative}
+#pages{display:flex;flex-direction:column;align-items:center;gap:18px;padding:20px;min-width:max-content}
+.page{position:relative;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.3);overflow:hidden;flex:none}
+.page canvas{position:absolute;inset:0;width:100%;height:100%}
+.ov{position:absolute;left:0;top:0;transform-origin:0 0}
+.ov.t-text,.ov.t-edit{cursor:text}
+.ov.t-whiteout,.ov.t-highlight,.ov.t-box,.ov.t-draw,.ov.t-sign,.ov.t-image,.ov.t-check,.ov.t-cross,.ov.t-date{cursor:crosshair}
+.obj{position:absolute;transform-origin:0 0}
+.obj.text{white-space:pre;line-height:1.2;outline:none;min-width:3px;min-height:1em;cursor:move}
+.obj.text[contenteditable]{cursor:text;background:rgba(255,255,160,.35)}
+.obj.whiteout{background:#fff}
+.obj.highlight{mix-blend-mode:multiply;opacity:.4}
+.obj.box{background:transparent}
+.obj.image{user-select:none}
+.obj.image img{display:block;width:100%;height:100%}
+.ov.t-select .obj,.ov.t-select svg.vec path{cursor:move}
+.obj.sel,svg.vec.sel .bbox{outline:calc(1.5px / var(--s)) dashed var(--accent);outline-offset:calc(1px / var(--s))}
+svg.vec{position:absolute;left:0;top:0;overflow:visible;pointer-events:none}
+svg.vec path{fill:none;stroke-linecap:round;stroke-linejoin:round}
+svg.vec path.hit{stroke:transparent;pointer-events:stroke}
+svg.vec .bbox{fill:none;stroke:var(--accent);stroke-dasharray:4 3;vector-effect:non-scaling-stroke}
+.selbar{position:absolute;z-index:3;display:flex;gap:4px}
+.selbar button{font-size:13px;padding:5px 11px;border:0;border-radius:6px;background:#1d2129;color:#fff;box-shadow:0 2px 8px rgba(0,0,0,.3);touch-action:manipulation}
+.selbar button.danger{background:var(--danger)}
+.handle{position:absolute;width:calc(11px / var(--s));height:calc(11px / var(--s));right:calc(-6px / var(--s));bottom:calc(-6px / var(--s));background:var(--accent);border:calc(1px / var(--s)) solid #fff;border-radius:2px;cursor:nwse-resize}
+.fld{position:absolute;margin:0;border:1px solid rgba(37,99,235,.55);background:#e8f0fe;color:#000;font-family:Arial,Helvetica,sans-serif;padding:0 2px;border-radius:0;resize:none}
+.fld:focus{outline:2px solid var(--accent);background:#fff}
+input.fld[type=checkbox],input.fld[type=radio]{padding:0;accent-color:#2563eb;cursor:pointer}
+.thumb{margin-bottom:12px;text-align:center;font-size:12px;color:var(--muted)}
+.thumb .tc{display:block;margin:0 auto 4px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);cursor:pointer;position:relative}
+.thumb .tc canvas{display:block;width:100%;height:100%}
+.thumb.cur .tc{outline:2px solid var(--accent)}
+.thumb .acts{display:flex;justify-content:center;gap:2px;margin-top:3px}
+.thumb .acts button{padding:0 5px;font-size:12px;line-height:20px}
+.thumb .acts button.del:hover{border-color:var(--danger);color:var(--danger)}
+#empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:var(--muted);text-align:center;padding:20px}
+#empty[hidden]{display:none}
+#empty .big{font-size:20px;color:var(--ink)}
+.credit{font-size:12px;color:var(--muted)}
+.credit a{color:var(--accent)}
+body.dragging #view{outline:3px dashed var(--accent);outline-offset:-8px}
+#toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:#222;color:#fff;padding:8px 14px;border-radius:8px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90vw;z-index:10}
+#toast.show{opacity:1}
+#toast.err{background:var(--danger)}
+#busy{position:fixed;inset:0;background:rgba(0,0,0,.25);display:none;align-items:center;justify-content:center;z-index:9;color:#fff;font-size:18px}
+#busy.show{display:flex}
+dialog{border:1px solid var(--line);border-radius:10px;background:var(--panel);color:var(--ink);padding:16px}
+dialog::backdrop{background:rgba(0,0,0,.4)}
+dialog h3{margin:0 0 10px}
+#sigPad{display:block;width:600px;max-width:80vw;height:200px;background:#fff;border:1px solid var(--line);border-radius:6px;touch-action:none;cursor:crosshair}
+.row{display:flex;gap:8px;align-items:center;margin-top:10px}
+.tips a{color:var(--accent);text-decoration:none;font-weight:600;white-space:nowrap}
+.tips a:hover{text-decoration:underline}
+#tipLink{margin-left:auto;font-size:13px;display:flex;gap:10px;align-items:center}
+#bInstall{font-size:13px;padding:3px 9px;border-color:var(--accent);color:var(--accent);font-weight:600}
+.sg-steps{margin:6px 0 10px;padding-left:22px;line-height:1.6}
+#thanks{position:fixed;right:18px;bottom:18px;width:300px;max-width:calc(100vw - 32px);background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:0 6px 24px rgba(0,0,0,.18);padding:14px 16px;z-index:8;font-size:14px}
+/* keep clear of an open side panel (its Send button sits at the bottom) */
+body:has(.sidepanel:not([hidden])) #thanks{right:306px}
+#thanks[hidden]{display:none}
+#thanks .x{position:absolute;top:6px;right:6px;border:0;background:none;font-size:18px;line-height:1;padding:4px 8px;color:var(--muted)}
+#thanks p{margin:0 24px 10px 0}
+#thanks .tips{display:flex;gap:14px;flex-wrap:wrap}
+#tip{position:fixed;z-index:20;max-width:260px;background:#1d2129;color:#fff;font-size:12.5px;line-height:1.35;padding:6px 9px;border-radius:6px;box-shadow:0 3px 12px rgba(0,0,0,.25);pointer-events:none;opacity:0}
+#tip.show{opacity:1;transition:opacity .12s}
+/* signing requests */
+.ov.t-field{cursor:crosshair}
+.obj.sfield{--fc:#888;border:calc(1.5px / var(--s)) dashed var(--fc);background:color-mix(in srgb,var(--fc) 13%,transparent);color:var(--fc);display:flex;align-items:center;justify-content:center;overflow:hidden;font-family:Arial,Helvetica,sans-serif;font-weight:700;white-space:nowrap;cursor:move;line-height:1}
+.obj.sfield img{width:100%;height:100%;object-fit:contain;pointer-events:none}
+.obj.sfield .sf-label{overflow:hidden;text-overflow:ellipsis;max-width:100%;padding:0 2px;pointer-events:none}
+.obj.sfield .sf-text{color:#000;font-weight:400;width:100%;padding:0 2px;text-align:left;overflow:hidden}
+.obj.sfield.other{opacity:.6;cursor:default}
+.obj.sfield.mine{cursor:pointer;border-style:solid}
+.obj.sfield.todo{background:color-mix(in srgb,#ffd43b 45%,transparent);animation:sgpulse 1.8s ease-in-out infinite}
+.obj.sfield.flash{outline:calc(3px / var(--s)) solid #ffd43b}
+@keyframes sgpulse{50%{background:color-mix(in srgb,#ffd43b 20%,transparent)}}
+.sf-input{width:100%;height:100%;border:0;margin:0;padding:0 2px;background:transparent;font-family:Arial,Helvetica,sans-serif;color:#000;outline:none}
+.sf-check{width:100%;height:100%;margin:0;accent-color:#2563eb;cursor:pointer}
+textarea.sf-input{resize:none;line-height:1.2}
+select.sf-input{border:0;background:transparent}
+.obj.sfield .sf-text.multi{white-space:pre-wrap;align-self:flex-start;line-height:1.2}
+button.fld.sigfld{font-family:Arial,Helvetica,sans-serif;font-weight:700;color:#2563eb;cursor:pointer;padding:0;text-align:center}
+button.fld.sigfld.done{background:transparent;border-style:dashed}
+.sidepanel{width:270px;flex:none;overflow:auto;background:var(--panel);border-left:1px solid var(--line);padding:12px;display:flex;flex-direction:column;gap:8px}
+.sidepanel[hidden]{display:none}
+.prep-head{display:flex;align-items:center;justify-content:space-between}
+.prep-head button{border:0;background:none;font-size:20px;padding:0 6px;color:var(--muted)}
+.sg-row{display:flex;gap:6px;align-items:flex-start;padding:8px 6px;border-bottom:1px solid var(--line);border-radius:6px;cursor:pointer}
+.sg-row.active{background:color-mix(in srgb,var(--rc) 14%,transparent);box-shadow:inset 4px 0 0 var(--rc)}
+.obj.sfield.ghost{pointer-events:none;opacity:.6}
+.sg-fields{flex:1;display:flex;flex-direction:column;gap:4px;min-width:0}
+.sg-fields input{font:inherit;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:4px 6px;min-width:0}
+.sg-sub{display:flex;gap:6px;align-items:center}
+.sg-code{width:82px;font-family:ui-monospace,Consolas,monospace !important}
+.sg-x{border:0;background:none;font-size:18px;padding:0 4px;color:var(--muted)}
+.sg-dot{display:inline-block;width:11px;height:11px;border-radius:50%;flex:none}
+#fieldKinds,#formKinds{display:flex;flex-wrap:wrap;gap:4px}
+.sg-formnote{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:13px;display:flex;flex-direction:column;gap:8px}
+.sg-formnote button{align-self:flex-start}
+#signbar{display:none;flex-basis:100%;align-items:center;gap:12px;flex-wrap:wrap}
+body.signing #signbar{display:flex}
+body.signing .edit-only,body.signing #hint,body.signing .thumb .acts{display:none !important}
+.sg-title{display:flex;align-items:baseline;gap:4px}
+.sg-chips{display:flex;gap:6px;flex-wrap:wrap}
+.sg-chip{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;padding:2px 9px;border-radius:999px;border:1px solid var(--line)}
+.sg-chip.signed{border-color:#2b8a3e;color:#2b8a3e}
+.sg-acts{display:flex;gap:6px;align-items:center;margin-left:auto;flex-wrap:wrap}
+.sg-dlg{max-width:min(560px,92vw)}
+.sg-dlg.wide{max-width:min(720px,94vw);width:720px}
+.sg-dlg p{margin:0 0 10px}
+.sg-consent{font-size:13.5px;line-height:1.5;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px}
+.sg-codein{font:inherit;font-size:20px;letter-spacing:3px;width:100%;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--ink)}
+.sg-err{color:var(--danger);min-height:20px;margin-top:6px}
+.sg-sent{display:flex;flex-direction:column;gap:10px}
+.sg-sent-row{display:flex;flex-direction:column;gap:5px;padding-bottom:10px;border-bottom:1px solid var(--line)}
+.sg-copy{display:flex;gap:6px;align-items:center}
+.sg-copy input{flex:1;font:12px ui-monospace,Consolas,monospace;padding:5px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);min-width:0}
+.sg-copy code{font-size:16px;letter-spacing:2px}
+.sg-copy a{color:var(--accent)}
+.sg-list-row{flex-direction:row;justify-content:space-between;align-items:center;gap:10px}
+.esign-info{max-height:58vh;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:2px 14px 10px;background:var(--bg);font-size:13.5px;line-height:1.5}
+.esign-info h4{margin:12px 0 4px;font-size:14px}
+.esign-info ul{margin:0;padding-left:18px}
+.esign-info li{margin:3px 0}
+.sg-dlg details{margin:8px 0}
+.sg-dlg summary{cursor:pointer;color:var(--accent)}
+.sg-dlg details .esign-info{margin-top:6px;max-height:40vh}
+.sg-share{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+a.btnlink{display:inline-block;font:inherit;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:4px 8px;text-decoration:none}
+a.btnlink:hover{border-color:var(--accent)}
+.sg-mine{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px}
+.sg-next{border-left:4px solid var(--accent);padding:4px 10px}
+.sg-next p{margin:4px 0 0}
+.sg-from{display:flex;flex-direction:column;gap:3px;font-weight:600;font-size:13px}
+/* Make fillable */
+.ov.t-formfield{cursor:crosshair}
+.obj.ffield{--fc:#0c8599;border:calc(1px / var(--s)) solid var(--fc);background:color-mix(in srgb,var(--fc) 13%,transparent);color:var(--fc);font-family:Arial,Helvetica,sans-serif;font-weight:700;display:flex;align-items:center;overflow:hidden;white-space:nowrap;cursor:move;line-height:1}
+.obj.ffield.multiline{align-items:flex-start;padding-top:2px}
+.obj.ffield.radio{border-radius:50%}
+.obj.ffield.ghost{pointer-events:none;opacity:.6}
+.ff-prop{display:flex;flex-direction:column;gap:3px;font-size:13px;font-weight:600;margin-top:6px}
+.ff-prop input,.ff-prop textarea,.ff-prop select{font:inherit;font-weight:400;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:5px 7px;resize:vertical}
+.ff-prop .lbl{font-weight:400}
+#formProps{display:flex;flex-direction:column;gap:4px}
+#formProps > button{align-self:flex-start;margin-top:6px}
+.sg-from input{font:inherit;font-weight:400;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:5px 7px}
+#esignAbout{background:none;border:0;padding:0;color:var(--accent);text-align:left;cursor:pointer}
+#mbar,.panel-mini{display:none}
+.prep-head span{display:flex;gap:2px}
+@media (max-width:700px){
+  /* Phones: one compact bar (Menu, Tool, Aa, Undo, Save). Each opens the matching toolbar group
+     as a drop-down below it; tapping the document closes it. Nothing is wider than the screen. */
+  html,body{max-width:100vw;overflow-x:hidden}
+  header{padding:6px 8px;gap:4px}
+  #mbar{display:flex;gap:6px;width:100%;align-items:center}
+  #mbar button{padding:7px 11px;font-size:15px}
+  #mbar button[aria-expanded="true"]{background:var(--accent-weak);border-color:var(--accent)}
+  #mSave{margin-left:auto}
+  body:not(.signing) header > .grp, body:not(.signing) #tipLink{display:none}
+  body.m-menu #gFile, body.m-menu #gSign, body.m-menu #gEdit, body.m-menu #gZoom, body.m-menu #tipLink,
+  body.m-tools #tools, body.m-style #gStyle{display:flex}
+  header > .grp{width:100%;flex-wrap:wrap;gap:6px;border-right:0;padding:8px 0 4px;border-top:1px solid var(--line)}
+  header > .grp[data-label]::before{content:attr(data-label);flex-basis:100%;font-size:12px;color:var(--muted)}
+  header > .grp button,header > .grp select{padding:7px 11px;font-size:15px}
+  #tools button{flex:1 1 30%}
+  body.m-menu #tipLink{width:100%;justify-content:space-between;padding:8px 0 4px;border-top:1px solid var(--line);margin:0}
+  body.signing #gZoom{width:auto;border-top:0;padding:0}
+  body.signing #gZoom::before{display:none}
+  #hint{font-size:12px}
+  #side{display:none}
+  #pages{padding:8px;gap:10px}
+  /* the Get signatures panel is a bottom sheet; while placing fields it shrinks to one line */
+  .sidepanel{position:fixed;left:0;right:0;bottom:0;width:auto;max-height:60vh;z-index:6;border-left:0;border-top:1px solid var(--line);box-shadow:0 -6px 24px rgba(0,0,0,.25)}
+  body:has(.sidepanel:not([hidden])) #thanks{right:16px;bottom:auto;top:64px}
+  .sidepanel.mini{padding:8px 12px}
+  .sidepanel.mini > :not(.prep-head){display:none}
+  .panel-mini{display:inline-block}
+  .sg-dlg.wide{width:auto}
+}
+/* touch: drawing, dragging boxes and moving items must not scroll the page instead */
+.ov.t-draw,.ov.t-whiteout,.ov.t-highlight,.ov.t-box,.ov .obj,.ov svg.vec path.hit{touch-action:none}
+</style>
+</head>
+<body>
+<header>
+  <!-- phones only: a compact bar; each button opens one of the groups below as a drop-down -->
+  <div id="mbar" class="edit-only">
+    <button id="mMenu" aria-expanded="false">&#9776; Menu</button>
+    <button id="mTools" aria-expanded="false"><span id="mToolName">Select</span> &#9662;</button>
+    <button id="mStyle" aria-expanded="false" title="Text and line style">Aa</button>
+    <button id="mUndo" title="Undo">&#8630;</button>
+    <button id="mSave" class="primary">Save</button>
+  </div>
+  <div class="grp edit-only" id="gFile" data-label="File">
+    <button id="bOpen" title="Open a PDF from your computer (Ctrl+O). You can also drag a file onto the page.">Open</button>
+    <button id="bAdd" title="Merge: add the pages of another PDF to the end of this one">Add PDF</button>
+    <button id="bSave" class="primary" title="Save a copy with your changes (Ctrl+S)">Save</button>
+    <button id="bClose" title="Close this document. Your work is kept in this browser until you close it, so use this on shared computers.">Close</button>
+    <label class="chk" id="flattenWrap" hidden title="Lock form answers into the page so they can no longer be edited"><input type="checkbox" id="flatten"> Flatten form</label>
+  </div>
+  <div class="grp edit-only" id="tools" data-label="Tools">
+    <button data-tool="select" title="Select (V): click something you added to move, resize or delete it">Select</button>
+    <button data-tool="text" title="Text (T): click anywhere and type">Text</button>
+    <button data-tool="edit" title="Edit text (E): click words already in the PDF to retype them">Edit text</button>
+    <button data-tool="whiteout" title="Whiteout (W): drag a box to cover something with white. It only hides it: the original text is still in the file. Use Redact to remove it for good.">Whiteout</button>
+    <button data-tool="highlight" title="Highlight (H): drag over text to highlight it">Highlight</button>
+    <button data-tool="box" title="Box (R): drag to draw an outlined rectangle">Box</button>
+    <button data-tool="draw" title="Draw (D): drag to draw freehand">Draw</button>
+    <button data-tool="sign" title="Sign (S): draw your signature once, then click to place it">Sign</button>
+    <button data-tool="image" title="Image (I): pick a picture, then click to place it. Ctrl+V pastes screenshots too.">Image</button>
+    <button data-tool="check" title="Check mark: click to stamp a check">&#10004;</button>
+    <button data-tool="cross" title="X mark: click to stamp an X">&#10008;</button>
+    <button data-tool="date" title="Date (A): click to stamp today's date, or click a form field to fill it">Date</button>
+  </div>
+  <div class="grp edit-only" id="gStyle" data-label="Text and line style">
+    <select id="pFont" title="Font for new or selected text"><option value="helv">Helvetica</option><option value="times">Times</option><option value="courier">Courier</option></select>
+    <input type="number" id="pSize" min="4" max="200" step="1" value="12" title="Size of new or selected text and marks, in points">
+    <label class="chk" title="Bold new or selected text"><input type="checkbox" id="pBold"> Bold</label>
+    <input type="color" id="pColor" value="#000000" title="Color for text, drawing, boxes, marks and highlights">
+    <span class="lbl" title="Line thickness for Draw and Box, in points">Line</span><input type="number" id="pWidth" min="0.5" max="20" step="0.5" value="2" title="Line thickness for Draw and Box, in points">
+  </div>
+  <div class="grp edit-only" id="gSign" data-label="Forms and signatures">
+    <button id="bSignReq" data-if="signing" title="Get signatures: add signers, place their fields, and send each person a secure link">Get signatures</button>
+    <button id="bFormPrep" title="Make fillable: add text boxes, checkboxes, dates and choices that people can fill in with any PDF reader">Make fillable</button>
+  </div>
+  <div class="grp edit-only" id="gEdit" data-label="Edit">
+    <button id="bUndo" title="Undo (Ctrl+Z)">Undo</button>
+    <button id="bRedo" title="Redo (Ctrl+Y)">Redo</button>
+    <button id="bDel" title="Delete the selected item (Delete key)">Delete</button>
+    <button id="bPaste" title="Paste the last thing you copied where you last clicked or tapped (Ctrl+V)">Paste</button>
+  </div>
+  <div class="grp" id="gZoom" data-label="Zoom">
+    <button id="bZoomOut" title="Zoom out">&minus;</button>
+    <span id="zoomLbl" class="lbl" style="min-width:42px;text-align:center">125%</span>
+    <button id="bZoomIn" title="Zoom in">+</button>
+    <button id="bFit" title="Zoom to fit the window width">Fit</button>
+  </div>
+  <span class="tips" id="tipLink"><button id="bInstall" hidden title="Install this editor as an app so PDFs on this computer can open in it">Install app</button><a href="#" id="tipOpen" data-if="tipJar" title="Support this free tool">&#9749; Tip jar</a></span>
+  <div id="hint"></div>
+  <div id="signbar"></div>
+</header>
+<main>
+  <aside id="side"><div id="thumbs"></div></aside>
+  <div id="view">
+    <div id="pages"></div>
+    <div id="empty">
+      <div class="big">Open a PDF or drop one here</div>
+      <button class="primary" id="bOpen2">Open PDF</button>
+      <div>Editing happens entirely in this browser tab; your files are not uploaded.<span data-if="signing"> The one exception is Get signatures, which encrypts the document in your browser before sending it, so the server can't read it.</span><br>Your work is kept in this browser (so a refresh won't lose it) until you click Close.</div>
+      <div class="tips" id="emptyTips" data-if="tipJar">Free, no ads, no account. If it helps, tips keep it that way: </div>
+      <div class="credit" data-credit></div>
+    </div>
+  </div>
+  <aside id="prep" class="sidepanel" hidden>
+    <div class="prep-head"><strong id="prepTitle">Get signatures</strong><span><button id="prepMini" class="panel-mini" title="Show or hide the panel">&#9662;</button><button id="prepClose" title="Close this panel">&times;</button></span></div>
+    <div class="lbl">Add each person who needs to sign, pick them, then place their fields on the document. Each person gets their own link and access code. For choice lists, pick-one buttons and multi-line boxes, use Make fillable and set who fills each one.</div>
+    <label class="sg-from">Your name <span class="lbl">(signers see who sent it)</span><input id="senderName" placeholder="Your full name" autocomplete="name"></label>
+    <button id="esignAbout" title="What is recorded, what the record shows, what it does not prove, and what that means">What we record and what it means</button>
+    <label class="chk" title="Off: the link alone opens the document, like DocuSign's default. On: each person also types a code you send them separately (for example, by text), so someone who only sees the link can't sign."><input type="checkbox" id="requireCode"> Require an access code</label>
+    <div id="signerList"></div>
+    <div id="prepForm"></div>
+    <button id="addSigner" title="Add another person who needs to sign">+ Add signer</button>
+    <div class="lbl" style="margin-top:6px">Place a field for the picked signer:</div>
+    <div id="fieldKinds"></div>
+    <button id="sendSign" class="primary" style="margin-top:8px" title="Encrypt the document and create a signing link for each person">Send for signing</button>
+    <button id="sentList" title="Links, codes and status for requests sent from this browser">Your signing requests</button>
+  </aside>
+  <aside id="formPrep" class="sidepanel" hidden>
+    <div class="prep-head"><strong id="formTitle">Make fillable</strong><span><button id="formMini" class="panel-mini" title="Show or hide the panel">&#9662;</button><button id="formClose" title="Close this panel">&times;</button></span></div>
+    <div class="lbl">Add fields people can fill in. Save gives a normal fillable PDF that works in Chrome, Edge, Safari, Mac Preview, Acrobat Reader and phone PDF viewers. No account or website needed on their end.<span data-if="signing"> To have specific people fill them in and sign, open Get signatures too: each field gets a “Filled by” choice.</span></div>
+    <div class="lbl" style="margin-top:4px">Place a field:</div>
+    <div id="formKinds"></div>
+    <div id="formProps"></div>
+    <div id="formCount" class="lbl"></div>
+  </aside>
+</main>
+<input type="file" id="fileIn" accept="application/pdf,.pdf" multiple hidden>
+<input type="file" id="imgIn" accept="image/*" hidden>
+<dialog id="sigDlg">
+  <h3 id="sigTitle">Draw your signature</h3>
+  <canvas id="sigPad"></canvas>
+  <div class="row">
+    <button id="sigClear">Clear</button>
+    <label class="chk"><input type="checkbox" id="sigRemember" checked> Remember on this computer</label>
+    <span style="flex:1"></span>
+    <button id="sigCancel">Cancel</button>
+    <button id="sigUse" class="primary">Use it</button>
+  </div>
+</dialog>
+<div id="thanks" hidden role="dialog" aria-label="Support this tool">
+  <button class="x" id="thanksClose" title="Close">&times;</button>
+  <p><strong id="thanksSaved">Saved. </strong><span data-app="tipMessage"></span></p>
+  <div class="tips" id="thanksTips"></div>
+</div>
+<div id="busy"><span id="busyMsg">Working...</span></div>
+<div id="toast"></div>
+<div id="tip" role="tooltip"></div>
+
+<script src="vendor/pdf.min.js"></script>
+<script src="vendor/pdf-lib.min.js"></script>
+<script>
+'use strict';
+const {PDFDocument, StandardFonts, rgb, degrees, LineCapStyle, PDFName} = PDFLib;
+const $ = s => document.querySelector(s);
+const NS = 'http://www.w3.org/2000/svg';
+
+// base = distance from line-box top to baseline, in ems, for line-height 1.2 with the
+// browser stand-in font (Arial / Times New Roman / Courier New metrics).
+const FONTS = {
+  helv:    {css: 'Arial, Helvetica, sans-serif',          base: 0.947,  std: ['Helvetica', 'HelveticaBold']},
+  times:   {css: '"Times New Roman", Times, serif',       base: 0.9375, std: ['TimesRoman', 'TimesRomanBold']},
+  courier: {css: '"Courier New", Courier, monospace',     base: 0.8665, std: ['Courier', 'CourierBold']},
+};
+const LH = 1.2;
+const ZOOMS = [0.5, 0.75, 1, 1.25, 1.5, 2, 2.5, 3, 4];
+const HINTS = {
+  select: 'Click to select, drag to move, arrow keys to nudge, Delete to remove. Double-click text to edit it. Ctrl+C / Ctrl+V copies and pastes (pastes where the mouse is).',
+  text: 'Click anywhere to start typing. Click away to finish a box, click again for another. Esc or another tool to stop.',
+  edit: 'Click existing text to replace it (covers the original and lets you retype it). Stays on until you pick another tool.',
+  whiteout: 'Drag to cover something with white. This only hides it; the text underneath is still in the file. To remove it for good, use Redact.',
+  highlight: 'Drag over text to highlight it (uses the color picker).',
+  box: 'Drag to draw a rectangle.',
+  draw: 'Drag to draw freehand.',
+  sign: 'Click where your signature goes. Each click places another copy.',
+  image: 'Click where the image goes. Each click places another copy.',
+  check: 'Click to stamp a check mark.',
+  cross: 'Click to stamp an X.',
+  date: "Click to stamp today's date, or click a form field to fill it.",
+  field: 'Click to place the field for the signer picked in the panel. Drag to move, use the corner to resize.',
+  formfield: 'Click to place the fillable field. Drag to move, use the corner to resize, and name it in the panel.',
+};
+
+const S = {
+  sources: [],          // {name, bytes, js, pages: Map, text: Map}
+  pages: [],            // {id, src, idx, baseRot, rot, view:[x1,y1,x2,y2], objs:[]}
+  fields: [],           // AcroForm fields: {src, name, type, value, orig, widgets:[{page, rect, on}]}
+  images: new Map(),    // id -> {url, aspect}
+  scale: 1.25, tool: 'select', sel: null, editing: null,
+  undo: [], redo: [], dirty: false, sig: null, pendingImg: null, nextId: 1,
+  mode: 'edit',         // 'edit', or 'sign' / 'manage' when opened from a signing link (sign.js)
+  signers: [], activeSigner: null, fieldKind: 'signature',
+};
+const props = {font: 'helv', size: 12, color: '#000000', bold: false, width: 2};
+const DOM = new Map();     // page id -> {el, ov, cv, rendered}
+// tools.js plugs in here: build/draw for its own object types, click handlers for its tools,
+// thumbnail buttons, toolbar state, and a last pass over the finished PDF (redaction, comments)
+const EXT = {build: {}, draw: {}, tools: {}, thumbActs: null, updateUI: null, finish: null, toolChanged: null};
+const tasks = new Set();
+const uid = () => S.nextId++;
+
+// ---------- small helpers ----------
+let toastTimer;
+function toast(msg, err) {
+  const t = $('#toast'); t.textContent = msg; t.className = 'show' + (err ? ' err' : '');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.className = '', err ? 6000 : 2600);
+}
+function busy(msg) { $('#busyMsg').textContent = msg || ''; $('#busy').classList.toggle('show', !!msg); }
+function rotVec(lx, ly, rot) {
+  const a = -rot * Math.PI / 180, c = Math.cos(a), s = Math.sin(a);
+  return [lx * c - ly * s, lx * s + ly * c];
+}
+function hexRgb(h) { const n = parseInt(h.slice(1), 16); return rgb((n >> 16 & 255) / 255, (n >> 8 & 255) / 255, (n & 255) / 255); }
+function dims(p) {
+  return {W: p.view[2] - p.view[0], H: p.view[3] - p.view[1], R: ((p.baseRot + p.rot) % 360 + 360) % 360};
+}
+// overlay space (u,v) is the unrotated page in points, y down; this maps it onto the rotated viewer.
+function ovMatrix(R, s, W, H) {
+  return {0: [s, 0, 0, s, 0, 0], 90: [0, s, -s, 0, s * H, 0], 180: [-s, 0, 0, -s, s * W, s * H], 270: [0, -s, s, 0, 0, s * W]}[R];
+}
+function toUV(p, cx, cy) {
+  const {W, H, R} = dims(p), r = DOM.get(p.id).el.getBoundingClientRect();
+  const x = (cx - r.left) / S.scale, y = (cy - r.top) / S.scale;
+  return {0: [x, y], 90: [y, H - x], 180: [W - x, H - y], 270: [W - y, x]}[R];
+}
+function pageById(id) { return S.pages.find(p => p.id === id); }
+function findSel() {
+  if (!S.sel) return null;
+  const p = pageById(S.sel.pid); const o = p && p.objs.find(o => o.id === S.sel.oid);
+  return o ? {p, o} : null;
+}
+async function getPage(src, idx) {
+  const s = S.sources[src];
+  if (!s.pages.has(idx)) s.pages.set(idx, s.js.getPage(idx + 1));
+  return s.pages.get(idx);
+}
+function loadImageUrl(url) {
+  return new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = url; });
+}
+
+// ---------- undo ----------
+// fields: [value, adopted] for each of the PDF's own form fields (adopted = handed to a signer, forms.js)
+function snap() { return JSON.stringify({pages: S.pages, fields: S.fields.map(f => [f.value, !!f.adopted]), signers: S.signers}); }
+function restore(json) {
+  const d = JSON.parse(json);
+  S.pages = d.pages; d.fields.forEach(([v, adopted], i) => { if (S.fields[i]) { S.fields[i].value = v; S.fields[i].adopted = adopted; } });
+  S.signers = d.signers || [];
+  if (typeof renderPrep === 'function') renderPrep();
+  S.sel = null; S.editing = null; renderPages();
+}
+function commit(before) { S.undo.push(before); if (S.undo.length > 80) S.undo.shift(); S.redo = []; S.dirty = true; updateUI(); }
+function pushUndo() { commit(snap()); }
+function undo() { finishEditing(); if (!S.undo.length) return; S.redo.push(snap()); restore(S.undo.pop()); S.dirty = true; }
+function redo() { finishEditing(); if (!S.redo.length) return; S.undo.push(snap()); restore(S.redo.pop()); S.dirty = true; }
+
+// ---------- loading ----------
+let workerReady;
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'vendor/pdf.worker.min.js';
+if (location.protocol === 'file:') {
+  // Browsers refuse Worker() from file://, so run pdf.js's worker on the main thread.
+  workerReady = new Promise((res, rej) => {
+    const sc = document.createElement('script'); sc.src = 'vendor/pdf.worker.min.js';
+    sc.onload = res; sc.onerror = rej; document.head.appendChild(sc);
+  });
+} else workerReady = Promise.resolve();
+
+// handle: the file's FileSystemFileHandle when the computer opened it with the installed app,
+// so Save can write back to the original
+async function openFiles(files, append, handle) {
+  files = [...files].filter(f => f.type === 'application/pdf' || /\.pdf$/i.test(f.name));
+  if (!files.length) return toast('That is not a PDF', true);
+  if (!append && S.dirty && !confirm('Discard unsaved changes?')) return;
+  finishEditing();
+  busy('Opening...');
+  try {
+    await workerReady;
+    if (!append) { resetDoc(); if (handle && files.length === 1) S.fileHandle = handle; }
+    else if (S.pages.length) pushUndo();
+    let added = 0;
+    for (const f of files) {
+      const bytes = new Uint8Array(await f.arrayBuffer());
+      let js;
+      try { js = await loadPdfjs(bytes, f.name); } catch (e) { toast(`Could not open ${f.name}: ${e.message}`, true); continue; }
+      const si = S.sources.push({name: f.name, bytes, js, pages: new Map(), text: new Map()}) - 1;
+      for (let i = 0; i < js.numPages; i++) {
+        const pg = await getPage(si, i);
+        S.pages.push({id: uid(), src: si, idx: i, baseRot: pg.rotate, rot: 0, view: pg.view.slice(), objs: []});
+        added++;
+      }
+      await readFields(si);
+    }
+    if (append && added) toast(`Added ${added} page${added > 1 ? 's' : ''}`);
+    document.title = S.sources.length ? S.sources[0].name + ' - ' + APP.name : APP.name;
+    renderPages();
+    if (!append) fitIfTooWide();
+    if (S.tool === 'edit') prefetchText();
+    await persistSources(); await persistState();
+  } finally { busy(); }
+}
+// the 14 standard PDF fonts, for files that use Helvetica, Times and so on without including them
+const STD_FONTS = new URL('vendor/standard_fonts/', location.href).href;
+function loadPdfjs(bytes, name) {
+  const task = pdfjsLib.getDocument({data: bytes.slice(), standardFontDataUrl: STD_FONTS});
+  task.onPassword = (update, reason) => {
+    const pw = prompt(reason === pdfjsLib.PasswordResponses.INCORRECT_PASSWORD ? 'Wrong password. Try again:' : `"${name}" is password protected. Password:`);
+    if (pw === null) task.destroy(); else update(pw);
+  };
+  return task.promise;
+}
+function resetDoc() {
+  S.sources.forEach(s => s.js.destroy());
+  Object.assign(S, {sources: [], pages: [], fields: [], undo: [], redo: [], sel: null, editing: null, dirty: false, pendingImg: null, signers: [], fileHandle: null});
+  for (const [id] of S.images) if (!S.sig || S.sig.img !== id) S.images.delete(id);
+}
+
+// ---------- session persistence ----------
+// The open document and its edits are kept in this browser's IndexedDB (never uploaded),
+// so a refresh, crash or closed tab picks up where it left off.
+// restoring starts true: nothing may be written until the stored session has been read back
+let dbp, saveTimer, restoring = true, persistOk = true;
+function db() {
+  return dbp ||= new Promise((res, rej) => {
+    const r = indexedDB.open('pdfedit', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('kv');
+    r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+  });
+}
+async function kv(op, key, val) {
+  const d = await db();
+  return new Promise((res, rej) => {
+    const st = d.transaction('kv', op === 'get' ? 'readonly' : 'readwrite').objectStore('kv');
+    const r = op === 'get' ? st.get(key) : op === 'put' ? st.put(val, key) : st.delete(key);
+    r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+  });
+}
+function scheduleSave() { if (restoring) return; clearTimeout(saveTimer); saveTimer = setTimeout(persistState, 300); }
+async function persistSources() {
+  try { await kv('put', 'sources', S.sources.map(s => ({name: s.name, bytes: s.bytes}))); persistOk = true; }
+  catch (e) { persistOk = false; console.warn('could not store document', e); }
+}
+async function persistState() {
+  clearTimeout(saveTimer); saveTimer = null;
+  if (restoring) return;
+  try {
+    if (!S.sources.length) { await kv('del', 'sources'); await kv('del', 'state'); return; }
+    await kv('put', 'state', stateRecord());
+    persistOk = true;
+    try { localStorage.removeItem(PENDING); } catch {}
+  } catch (e) { persistOk = false; console.warn('could not store edits', e); }
+}
+const PENDING = 'pdfedit.pending';
+function stateRecord() { return {pages: S.pages, fields: S.fields, signers: S.signers, images: [...S.images], nextId: S.nextId, scale: S.scale, dirty: S.dirty, savedAt: Date.now()}; }
+async function restoreSession() {
+  let srcs, st, pending = null;
+  try { [srcs, st] = await Promise.all([kv('get', 'sources'), kv('get', 'state')]); } catch { persistOk = false; restoring = false; return; }
+  try { pending = JSON.parse(localStorage.getItem(PENDING)); } catch {}
+  if (pending && (!st || pending.savedAt > (st.savedAt || 0))) st = pending; else pending = null;
+  if (!srcs?.length || !st) { restoring = false; return; }
+  busy('Restoring your document...');
+  try {
+    await workerReady;
+    for (const s of srcs) S.sources.push({name: s.name, bytes: s.bytes, js: await loadPdfjs(s.bytes, s.name), pages: new Map(), text: new Map()});
+    Object.assign(S, {pages: st.pages, fields: st.fields, signers: st.signers || [], scale: st.scale || S.scale, dirty: st.dirty, nextId: Math.max(S.nextId, st.nextId)});
+    for (const [k, v] of st.images) S.images.set(k, v);
+    document.title = S.sources[0].name + ' - ' + APP.name;
+    renderPages();
+    if (S.pages.length) toast('Picked up where you left off');
+  } catch (e) {
+    console.warn('could not restore session', e);
+    resetDoc(); renderPages();
+  } finally { restoring = false; busy(); }
+  if (pending) persistState();   // move the unload-time copy into IndexedDB
+}
+// flush a pending save when the page goes away (refresh, close, tab switch)
+// IndexedDB writes started during unload often never commit, so the pending state also goes to
+// localStorage synchronously; restore uses whichever copy is newer.
+const flushSave = () => {
+  if (!saveTimer) return;
+  if (S.sources.length) { try { localStorage.setItem(PENDING, JSON.stringify(stateRecord())); } catch {} }
+  persistState();
+};
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flushSave(); });
+addEventListener('pagehide', flushSave);
+addEventListener('beforeunload', flushSave);
+
+async function readFields(si) {
+  const src = S.sources[si];
+  let doc;
+  try { doc = await PDFDocument.load(src.bytes, {ignoreEncryption: true, updateMetadata: false}); }
+  catch (e) { console.warn('pdf-lib could not parse', src.name, e); src.libError = e.message; return; }
+  src.encrypted = doc.isEncrypted;
+  if (doc.isEncrypted || !doc.catalog.get(PDFName.of('AcroForm'))) return;
+  const pages = doc.getPages();
+  const byRef = new Map(pages.map((p, i) => [p.ref.toString(), i]));
+  const annotPage = new Map();
+  pages.forEach((p, i) => {
+    const a = p.node.Annots(); if (!a) return;
+    for (let k = 0; k < a.size(); k++) { const r = a.get(k); if (r instanceof PDFLib.PDFRef) annotPage.set(r.toString(), i); }
+  });
+  let fields;
+  try { fields = doc.getForm().getFields(); } catch (e) { console.warn(e); return; }
+  for (const f of fields) {
+    const fd = {src: si, name: f.getName(), widgets: []};
+    try {
+      fd.readOnly = f.isReadOnly();
+      if (f instanceof PDFLib.PDFTextField) Object.assign(fd, {type: 'text', value: f.getText() || '', maxLen: f.getMaxLength(), multiline: f.isMultiline()});
+      else if (f instanceof PDFLib.PDFCheckBox) Object.assign(fd, {type: 'check', value: f.isChecked()});
+      else if (f instanceof PDFLib.PDFRadioGroup) Object.assign(fd, {type: 'radio', value: f.getSelected() || ''});
+      else if (f instanceof PDFLib.PDFDropdown) Object.assign(fd, {type: 'dropdown', options: f.getOptions(), value: f.getSelected()[0] || ''});
+      else if (f instanceof PDFLib.PDFOptionList) Object.assign(fd, {type: 'list', options: f.getOptions(), value: f.getSelected()});
+      // unsigned signature fields: clicking one puts a drawn signature in it (already-signed ones stay as they are)
+      else if (f instanceof PDFLib.PDFSignature && !f.acroField.dict.get(PDFName.of('V'))) {
+        const tip = f.acroField.dict.get(PDFName.of('TU'));
+        Object.assign(fd, {type: 'sig', value: null, initials: /initial/i.test(fd.name + ' ' + (tip?.decodeText?.() || ''))});
+      }
+      else continue;   // buttons and signed signature fields render on the canvas as-is
+    } catch (e) { console.warn('skipping field', fd.name, e); continue; }
+    fd.orig = JSON.stringify(fd.value);
+    // radio widgets may export by index ("0","1") with labels in /Opt; pdf-lib selects by label
+    const radioOpts = fd.type === 'radio' ? f.getOptions() : [];
+    for (const [k, w] of f.acroField.getWidgets().entries()) {
+      const ref = doc.context.getObjectRef(w.dict);
+      let pi = w.P() ? byRef.get(w.P().toString()) : undefined;
+      if (pi === undefined && ref) pi = annotPage.get(ref.toString());
+      if (pi === undefined) continue;
+      const r = w.getRectangle();
+      let on;
+      if (fd.type === 'radio' && radioOpts[k] !== undefined) on = radioOpts[k];
+      else if (fd.type === 'radio' || fd.type === 'check') { try { on = w.getOnValue()?.decodeText(); } catch {} }
+      if (fd.type === 'radio' && !on) continue;
+      fd.widgets.push({page: pi, rect: [r.x, r.y, r.width, r.height], on, rot: w.getAppearanceCharacteristics()?.getRotation() || 0});
+    }
+    if (fd.widgets.length) S.fields.push(fd);
+  }
+}
+
+// ---------- rendering ----------
+let pageObs, thumbObs;
+// One page render at a time: when two renders meet a font for the first time at once (a page and
+// its thumbnail, just after opening), pdf.js can draw letters with parts missing. Renders queued for
+// a layout that has since been rebuilt (zoom, rotate, ...) are skipped.
+let renderQueue = Promise.resolve(), renderGen = 0;
+function queueRender(run, always) {   // always: run even if the layout changes meanwhile (OCR, saving)
+  const gen = renderGen, job = renderQueue.then(() => always || gen === renderGen ? run() : undefined);
+  renderQueue = job.catch(() => {});
+  return job;
+}
+function cancelRenders() { renderGen++; tasks.forEach(t => t.cancel()); tasks.clear(); }
+function renderPages() {
+  const view = $('#view'), ratio = view.scrollHeight ? view.scrollTop / view.scrollHeight : 0;
+  cancelRenders(); DOM.clear();
+  pageObs?.disconnect(); thumbObs?.disconnect();
+  pageObs = new IntersectionObserver(es => es.forEach(e => e.isIntersecting && renderCanvas(e.target)), {root: view, rootMargin: '800px 0px'});
+  thumbObs = new IntersectionObserver(es => es.forEach(e => e.isIntersecting && renderThumb(e.target)), {root: $('#side'), rootMargin: '400px 0px'});
+  const host = $('#pages'), th = $('#thumbs');
+  host.textContent = ''; th.textContent = '';
+  S.pages.forEach((p, i) => { host.appendChild(buildPage(p)); th.appendChild(buildThumb(p, i)); });
+  S.pages.forEach(drawOverlay);
+  $('#empty').hidden = S.pages.length > 0;
+  view.scrollTop = ratio * view.scrollHeight;
+  updateUI();
+}
+function buildPage(p) {
+  const {W, H, R} = dims(p), s = S.scale, swap = R % 180 !== 0;
+  const el = document.createElement('div'); el.className = 'page'; el.dataset.pid = p.id;
+  el.style.width = (swap ? H : W) * s + 'px'; el.style.height = (swap ? W : H) * s + 'px';
+  const cv = document.createElement('canvas');
+  const ov = document.createElement('div'); ov.className = 'ov t-' + S.tool;
+  ov.style.width = W + 'px'; ov.style.height = H + 'px';
+  ov.style.transform = `matrix(${ovMatrix(R, s, W, H).join(',')})`; ov.style.setProperty('--s', s);
+  el.append(cv, ov);
+  DOM.set(p.id, {el, ov, cv, rendered: false});
+  pageObs.observe(el);
+  return el;
+}
+// p.view is the crop box; after a crop it differs from the page's own, so build the viewport from it
+function pageViewport(pg, p, scale) {
+  const v = p.view, o = pg.view, R = dims(p).R;
+  if (v.every((n, i) => n === o[i])) return pg.getViewport({scale, rotation: R});
+  const PageViewport = pg.getViewport({scale: 1}).constructor;   // pdf.js 3 doesn't export the class
+  return new PageViewport({viewBox: v, scale, rotation: R, offsetX: 0, offsetY: 0});
+}
+async function renderCanvas(el) {
+  const p = pageById(+el.dataset.pid), d = DOM.get(p?.id);
+  if (!d || d.el !== el || d.rendered) return; d.rendered = true;
+  const pg = await getPage(p.src, p.idx), dpr = window.devicePixelRatio || 1;
+  const vp = pageViewport(pg, p, S.scale * dpr);
+  d.cv.width = Math.round(vp.width); d.cv.height = Math.round(vp.height);
+  await queueRender(async () => {
+    const t = pg.render({canvasContext: d.cv.getContext('2d'), viewport: vp, annotationMode: pdfjsLib.AnnotationMode.ENABLE});
+    tasks.add(t);
+    try { await t.promise; } catch (e) { if (e?.name !== 'RenderingCancelledException') console.error(e); } finally { tasks.delete(t); }
+  });
+}
+function buildThumb(p, i) {
+  const {W, H, R} = dims(p), swap = R % 180 !== 0, tw = 112, s = tw / (swap ? H : W);
+  const t = document.createElement('div'); t.className = 'thumb'; t.dataset.pid = p.id;
+  const tc = document.createElement('div'); tc.className = 'tc';
+  tc.style.width = tw + 'px'; tc.style.height = (swap ? W : H) * s + 'px';
+  tc.onclick = () => DOM.get(p.id)?.el.scrollIntoView({block: 'start', behavior: 'smooth'});
+  const acts = document.createElement('div'); acts.className = 'acts';
+  const btn = (txt, title, fn, cls) => { const b = document.createElement('button'); b.innerHTML = txt; b.title = title; if (cls) b.className = cls; b.onclick = fn; acts.appendChild(b); return b; };
+  btn('&#8634;', 'Rotate left', () => pageOp(() => p.rot = (p.rot + 270) % 360));
+  btn('&#8635;', 'Rotate right', () => pageOp(() => p.rot = (p.rot + 90) % 360));
+  btn('&#8593;', 'Move up', () => pageOp(() => S.pages.splice(i - 1, 0, S.pages.splice(i, 1)[0]))).disabled = i === 0;
+  btn('&#8595;', 'Move down', () => pageOp(() => S.pages.splice(i + 1, 0, S.pages.splice(i, 1)[0]))).disabled = i === S.pages.length - 1;
+  EXT.thumbActs?.(btn, p, i);
+  btn('&#10005;', 'Delete this page', () => pageOp(() => S.pages.splice(i, 1)), 'del');
+  t.append(tc, document.createTextNode(i + 1), acts);
+  thumbObs.observe(t);
+  return t;
+}
+async function renderThumb(t) {
+  if (t.dataset.done) return; t.dataset.done = 1;
+  const p = pageById(+t.dataset.pid); if (!p) return;
+  const tc = t.querySelector('.tc'), pg = await getPage(p.src, p.idx), dpr = window.devicePixelRatio || 1;
+  const vp0 = pageViewport(pg, p, 1);
+  const vp = pageViewport(pg, p, parseFloat(tc.style.width) / vp0.width * dpr);
+  const cv = document.createElement('canvas'); cv.width = Math.round(vp.width); cv.height = Math.round(vp.height); tc.appendChild(cv);
+  await queueRender(async () => {
+    const task = pg.render({canvasContext: cv.getContext('2d'), viewport: vp, annotationMode: pdfjsLib.AnnotationMode.ENABLE});
+    tasks.add(task);
+    try { await task.promise; } catch (e) { if (e?.name !== 'RenderingCancelledException') console.error(e); } finally { tasks.delete(task); }
+  });
+}
+function pageOp(fn) { finishEditing(); pushUndo(); fn(); S.sel = null; renderPages(); }
+
+function strokeW(o) { return o.type === 'mark' ? o.w * 0.13 : o.width; }
+function pathFor(o) {
+  if (o.type === 'ink') return 'M' + o.pts.map(([u, v]) => `${u.toFixed(2)} ${v.toFixed(2)}`).join(' L') + (o.pts.length === 1 ? ` L${o.pts[0][0].toFixed(2)} ${o.pts[0][1].toFixed(2)}` : '');
+  const segs = o.glyph === 'check' ? [[[0.12, 0.55], [0.4, 0.84], [0.9, 0.16]]] : [[[0.15, 0.15], [0.85, 0.85]], [[0.85, 0.15], [0.15, 0.85]]];
+  return segs.map(seg => 'M' + seg.map(([a, b]) => { const [dx, dy] = rotVec(a * o.w, b * o.w, o.rot || 0); return `${(o.x + dx).toFixed(2)} ${(o.y + dy).toFixed(2)}`; }).join(' L')).join(' ');
+}
+function drawOverlay(p) {
+  const d = DOM.get(p.id); if (!d) return;
+  const ov = d.ov; ov.textContent = '';
+  // the PDF's own form fields, except ones handed to a signer (they're fillable-field objects now)
+  S.fields.forEach((fd, fi) => { if (fd.src === p.src && !fd.adopted) fd.widgets.forEach(w => { if (w.page === p.idx) ov.appendChild(buildField(fd, fi, w, p)); }); });
+  for (const o of p.objs) ov.appendChild(buildObj(o, p));
+  placeSelBar(p);
+}
+// A Delete button just above whatever is selected, so removing things doesn't depend on a keyboard
+// or a menu (phones). It lives on the page itself, not in the rotated/scaled overlay, so it stays
+// upright and normal-sized on any page at any zoom.
+function placeSelBar(p) {
+  const d = DOM.get(p.id); if (!d) return;
+  d.el.querySelector('.selbar')?.remove();
+  if (S.mode !== 'edit' || !S.sel || S.sel.pid !== p.id) return;
+  const el = d.ov.querySelector(`[data-oid="${S.sel.oid}"]`); if (!el) return;
+  const target = el.tagName.toLowerCase() === 'svg' ? el.querySelector('path.vis') || el : el;   // ink spans the page; use its stroke
+  const r = target.getBoundingClientRect(), pr = d.el.getBoundingClientRect();
+  const btn = (label, title, fn, cls) => { const b = document.createElement('button'); b.textContent = label; b.title = title; b.onclick = fn; if (cls) b.className = cls; return b; };
+  const bar = document.createElement('div'); bar.className = 'selbar';
+  bar.append(btn('Duplicate', 'Put a copy right next to it', () => duplicateSel()),
+    btn('Copy', 'Copy it, then use Paste (in the menu, or Ctrl+V) where you want it', () => copySel()),
+    btn('Delete', 'Delete this (Delete key)', () => deleteSel(), 'danger'));
+  d.el.appendChild(bar);
+  const above = r.top - pr.top - bar.offsetHeight - 6;
+  bar.style.top = (above >= 0 ? above : Math.min(r.bottom - pr.top + 6, pr.height - bar.offsetHeight)) + 'px';
+  bar.style.left = Math.max(0, Math.min(r.left - pr.left, pr.width - bar.offsetWidth)) + 'px';
+}
+function buildObj(o, p) {
+  const isSel = S.sel && S.sel.oid === o.id;
+  if (o.type === 'field') return buildSignField(o, p, isSel);   // sign.js
+  if (o.type === 'ffield') return buildFormFieldEl(o, isSel);   // forms.js
+  if (EXT.build[o.type]) return EXT.build[o.type](o, p, isSel);   // tools.js
+  if (o.type === 'ink' || o.type === 'mark') {
+    const {W, H} = dims(p);
+    const svg = document.createElementNS(NS, 'svg'); svg.setAttribute('class', 'vec' + (isSel ? ' sel' : ''));
+    svg.setAttribute('width', W); svg.setAttribute('height', H); svg.dataset.oid = o.id;
+    const d = pathFor(o), sw = strokeW(o);
+    const vis = document.createElementNS(NS, 'path'); vis.setAttribute('d', d); vis.setAttribute('stroke', o.color); vis.setAttribute('stroke-width', sw); vis.classList.add('vis');
+    const hit = document.createElementNS(NS, 'path'); hit.setAttribute('d', d); hit.setAttribute('stroke-width', Math.max(sw, 10 / S.scale)); hit.classList.add('hit');
+    svg.append(vis, hit);
+    if (isSel) {
+      const pts = o.type === 'ink' ? o.pts : [[o.x, o.y], [o.x + rotVec(o.w, o.w, o.rot || 0)[0], o.y + rotVec(o.w, o.w, o.rot || 0)[1]]];
+      const xs = pts.map(q => q[0]), ys = pts.map(q => q[1]), pad = sw / 2 + 2;
+      const r = document.createElementNS(NS, 'rect'); r.setAttribute('class', 'bbox');
+      const x0 = Math.min(...xs) - pad, y0 = Math.min(...ys) - pad;
+      r.setAttribute('x', x0); r.setAttribute('y', y0); r.setAttribute('width', Math.max(...xs) + pad - x0); r.setAttribute('height', Math.max(...ys) + pad - y0);
+      svg.appendChild(r);
+    }
+    return svg;
+  }
+  const el = document.createElement('div');
+  if (o.type === 'image') { const im = document.createElement('img'); im.src = S.images.get(o.img).url; im.draggable = false; el.appendChild(im); }
+  el.className = 'obj ' + o.type + (isSel ? ' sel' : '');
+  el.dataset.oid = o.id;
+  el.style.left = o.x + 'px'; el.style.top = o.y + 'px';
+  if (o.rot) el.style.transform = `rotate(${-o.rot}deg)`;
+  if (o.type === 'text') { el.textContent = o.text; styleText(el, o); }
+  else if (o.type === 'box') {
+    el.style.left = o.x - o.width / 2 + 'px'; el.style.top = o.y - o.width / 2 + 'px';
+    el.style.width = Math.max(0, o.w - o.width) + 'px'; el.style.height = Math.max(0, o.h - o.width) + 'px';
+    el.style.border = `${o.width}px solid ${o.color}`;
+    if (o.rot) el.style.transformOrigin = `${o.width / 2}px ${o.width / 2}px`;
+  } else { el.style.width = o.w + 'px'; el.style.height = o.h + 'px'; }
+  if (o.type === 'highlight') el.style.background = o.color;
+  if (isSel) { const h = document.createElement('div'); h.className = 'handle'; el.appendChild(h); }
+  return el;
+}
+function styleText(el, o) {
+  el.style.fontFamily = FONTS[o.font].css; el.style.fontSize = o.size + 'px';
+  el.style.fontWeight = o.bold ? '700' : '400'; el.style.color = o.color;
+  if (o.opacity != null) el.style.opacity = o.opacity;   // watermarks
+  if (o.stamp) el.dataset.stamp = o.stamp;   // tools.js: stamps only take clicks with the Select tool
+}
+function buildField(fd, fi, w, p) {
+  let el;
+  const [x, y, wd, ht] = w.rect;
+  if (fd.type === 'sig') {
+    const key = sigKey(fi, w), signed = p.objs.some(o => o.forSig === key);
+    el = document.createElement('button');
+    el.className = 'sigfld' + (signed ? ' done' : '');
+    el.textContent = signed ? '' : fd.initials ? 'Click to initial' : 'Click to sign';
+    el.style.fontSize = Math.max(6, Math.min(ht * 0.4, 12)) + 'px';
+    el.onclick = () => signIntoField(fd, fi, w, p);
+  } else if (fd.type === 'text') {
+    el = document.createElement(fd.multiline ? 'textarea' : 'input');
+    el.value = fd.value; if (fd.maxLen) el.maxLength = fd.maxLen;
+    el.style.fontSize = (fd.multiline ? 10 : Math.max(6, Math.min(ht * 0.68, 12))) + 'px';
+    el.oninput = () => setField(fi, el.value, el);
+  } else if (fd.type === 'check' || fd.type === 'radio') {
+    el = document.createElement('input'); el.type = fd.type === 'check' ? 'checkbox' : 'radio';
+    if (fd.type === 'radio') { el.name = 'f' + fi + '_' + p.id; el.checked = fd.value === w.on; el.onchange = () => setField(fi, w.on, el); }
+    else { el.checked = fd.value; el.onchange = () => setField(fi, el.checked, el); }
+  } else {
+    el = document.createElement('select');
+    if (fd.type === 'list') { el.multiple = true; }
+    else el.appendChild(new Option('', ''));
+    fd.options.forEach(o => el.appendChild(new Option(o, o)));
+    if (fd.type === 'list') [...el.options].forEach(o => o.selected = fd.value.includes(o.value)); else el.value = fd.value;
+    el.onchange = () => setField(fi, fd.type === 'list' ? [...el.selectedOptions].map(o => o.value) : el.value, el);
+    el.style.fontSize = Math.max(6, Math.min(ht * 0.68, 12)) + 'px';
+  }
+  el.classList.add('fld'); el.dataset.fi = fi; el.title = fd.name;
+  el.disabled = !!fd.readOnly;
+  el.style.left = x - p.view[0] + 'px'; el.style.top = p.view[3] - (y + ht) + 'px';
+  el.style.width = wd + 'px'; el.style.height = ht + 'px';
+  el.addEventListener('focus', () => { el._before = snap(); });
+  return el;
+}
+// ---------- signature fields in a fillable PDF ----------
+// Clicking one puts a drawn signature (or initials) into the box as an image. On save the field
+// itself is removed (applyFields), because readers draw fields over the page and would hide it.
+const sigKey = (fi, w) => `${fi}:${w.page}:${w.rect.map(Math.round).join(',')}`;
+// a widget's PDF rectangle as an overlay box, upright for its rotation
+function widgetBox(p, [x, y, w, h], rot = 0) {
+  const vw = rot % 180 ? h : w, vh = rot % 180 ? w : h;
+  const offs = [[0, 0], [vw, 0], [0, vh], [vw, vh]].map(([a, b]) => rotVec(a, b, rot));
+  return {x: x - p.view[0] - Math.min(...offs.map(q => q[0])), y: p.view[3] - (y + h) - Math.min(...offs.map(q => q[1])), w: vw, h: vh, rot};
+}
+async function imageFromUrl(url) {
+  const img = await loadImageUrl(url), id = 'img' + uid();
+  S.images.set(id, {url, aspect: img.naturalWidth / img.naturalHeight, natW: img.naturalWidth});
+  return id;
+}
+function signIntoField(fd, fi, w, p) {
+  const key = sigKey(fi, w);
+  const put = imgId => {
+    const o = {...fitImage(imgId, widgetBox(p, w.rect, w.rot)), id: uid(), forSig: key};
+    pushUndo(); p.objs = p.objs.filter(x => x.forSig !== key); p.objs.push(o); select(p, o);
+  };
+  if (!fd.initials && S.sig) return put(S.sig.img);   // your saved signature, like the Sign tool
+  openPad(fd.initials ? 'Draw your initials' : 'Draw your signature', async (url, remember) => {
+    if (fd.initials) return put(await imageFromUrl(url));
+    await setSignature(url);
+    try { remember ? localStorage.setItem('pdfedit.sig', url) : localStorage.removeItem('pdfedit.sig'); } catch {}
+    put(S.sig.img);
+  }, null, {remember: !fd.initials});
+}
+function setField(fi, val, src) {
+  const fd = S.fields[fi];
+  if (src._before) { commit(src._before); src._before = null; }
+  fd.value = val; S.dirty = true; scheduleSave();
+  // keep other widgets of the same field in sync
+  document.querySelectorAll(`.fld[data-fi="${fi}"]`).forEach(el => {
+    if (el === src) return;
+    if (fd.type === 'text') el.value = val;
+    else if (fd.type === 'check') el.checked = val;
+    else if (fd.type === 'radio') el.checked = false;
+    else if (fd.type === 'dropdown') el.value = val;
+  });
+  if (fd.type === 'radio') S.pages.filter(p => p.src === fd.src).forEach(drawOverlay);
+}
+
+// ---------- interaction ----------
+function redraw(...ps) { [...new Set(ps)].forEach(p => p && drawOverlay(p)); }
+function select(p, o) {
+  const prev = S.sel && pageById(S.sel.pid);
+  S.sel = o ? {pid: p.id, oid: o.id} : null;
+  redraw(prev, p);
+  if (o) syncProps(o);
+  updateUI();
+}
+function syncProps(o) {
+  if (o.type === 'text') { $('#pFont').value = o.font; $('#pSize').value = o.size; $('#pBold').checked = o.bold; }
+  if (o.type === 'mark') $('#pSize').value = Math.round(o.w);
+  if (o.color && o.type !== 'whiteout') $('#pColor').value = o.color;
+  if (o.width) $('#pWidth').value = o.width;
+}
+function drag(e, move, up) {
+  const id = e.pointerId;
+  const mv = ev => { if (ev.pointerId === id) move(ev); };
+  const end = ev => {
+    if (ev.pointerId !== id) return;
+    removeEventListener('pointermove', mv); removeEventListener('pointerup', end); removeEventListener('pointercancel', end);
+    up && up(ev);
+  };
+  addEventListener('pointermove', mv); addEventListener('pointerup', end); addEventListener('pointercancel', end);
+}
+function objEl(p, o) { return DOM.get(p.id)?.ov.querySelector(`[data-oid="${o.id}"]`); }
+
+$('#pages').addEventListener('pointerdown', e => {
+  if (e.button !== 0) return;
+  if (S.mode !== 'edit') return signPointer(e);   // sign.js: signers only fill their own fields
+  if (e.target.closest('.selbar')) return;          // its own click handler deletes
+  const pageEl = e.target.closest('.page'); if (!pageEl) return;
+  const fld = e.target.closest('.fld');
+  // with Get signatures open, clicking one of the PDF's own fields hands it to the picked signer (forms.js)
+  if (fld && !$('#prep').hidden) { e.preventDefault(); adoptField(+fld.dataset.fi); return; }
+  if (fld) { if (S.tool === 'date') fillDate(fld); return; }
+  const p = pageById(+pageEl.dataset.pid); if (!p) return;
+  const oel = e.target.closest('[data-oid]');
+  if (S.editing && oel && +oel.dataset.oid === S.editing.o.id) return;   // caret placement inside the text being edited
+  const wasEditing = !!S.editing;
+  finishEditing();
+  const [u, v] = toUV(p, e.clientX, e.clientY);
+  const R = dims(p).R;
+  e.preventDefault();
+  if (S.tool === 'draw') return startInk(p, u, v, e);
+  if (oel) {
+    const o = p.objs.find(o => o.id === +oel.dataset.oid);
+    if (o) {
+      if (e.target.classList.contains('handle')) return startResize(p, o, e);
+      if (o.type === 'ffield' && !$('#prep').hidden) assignToPicked(o);   // forms.js: give it to the picked signer
+      if (S.tool === 'text' && o.type === 'text') { select(p, o); return startEdit(p, o, true); }
+      select(p, o); return startMove(p, o, e);
+    }
+  }
+  switch (S.tool) {
+    case 'select': select(null); break;
+    case 'text': {
+      if (wasEditing) { select(null); break; }   // a click away just finishes the current box; the next click starts a new one
+      const [dx, dy] = rotVec(0, -props.size * 0.6, R);
+      const o = {id: uid(), type: 'text', x: u + dx, y: v + dy, text: '', size: props.size, font: props.font, bold: props.bold, color: props.color, rot: R};
+      pushUndo(); p.objs.push(o); select(p, o);
+      startEdit(p, o, false);
+      break;
+    }
+    case 'edit': editExisting(p, u, v); break;
+    case 'field': placeField(p, u, v, R); break;   // sign.js
+    case 'formfield': placeFormField(p, u, v, R); break;   // forms.js
+    case 'date': {
+      const [dx, dy] = rotVec(0, -props.size * 0.6, R);
+      const o = {id: uid(), type: 'text', x: u + dx, y: v + dy, text: todayStr(), size: props.size, font: props.font, bold: props.bold, color: props.color, rot: R};
+      pushUndo(); p.objs.push(o); select(p, o);
+      break;
+    }
+    case 'whiteout': case 'box': startRect(p, u, v, e); break;   // highlight: tools.js (snaps to text)
+    case 'sign': if (S.sig) placeImage(p, u, v, S.sig.img, 160); else openSig(); break;
+    case 'image': if (S.pendingImg) placeImage(p, u, v, S.pendingImg, null); else $('#imgIn').click(); break;
+    default: EXT.tools[S.tool]?.(p, u, v, e, R); break;   // tools.js
+    case 'check': case 'cross': {
+      const w = props.size * 1.2, [dx, dy] = rotVec(-w / 2, -w / 2, R);
+      pushUndo(); p.objs.push({id: uid(), type: 'mark', glyph: S.tool, x: u + dx, y: v + dy, w, color: props.color, rot: R}); redraw(p);
+      break;
+    }
+  }
+});
+$('#pages').addEventListener('dblclick', e => {
+  const oel = e.target.closest('[data-oid]'), pageEl = e.target.closest('.page');
+  if (!oel || !pageEl) return;
+  const p = pageById(+pageEl.dataset.pid), o = p?.objs.find(o => o.id === +oel.dataset.oid);
+  if (o && o.type === 'text' && !S.editing) startEdit(p, o, true);
+});
+
+function startMove(p, o, e) {
+  const before = snap(), [u0, v0] = toUV(p, e.clientX, e.clientY);
+  const orig = JSON.parse(JSON.stringify(o)); let moved = false;
+  drag(e, ev => {
+    const [u, v] = toUV(p, ev.clientX, ev.clientY), du = u - u0, dv = v - v0;
+    if (!moved && Math.hypot(du, dv) * S.scale < 3) return;
+    moved = true;
+    if (o.type === 'ink') o.pts = orig.pts.map(([a, b]) => [a + du, b + dv]);
+    else { o.x = orig.x + du; o.y = orig.y + dv; }
+    redraw(p);
+  }, () => { if (moved) commit(before); });
+}
+function startResize(p, o, e) {
+  const before = snap(), [u0, v0] = toUV(p, e.clientX, e.clientY), orig = {...o};
+  const textW = o.type === 'text' ? Math.max(10, objEl(p, o)?.offsetWidth || 10) : 0;
+  const aspect = o.type === 'image' ? S.images.get(o.img).aspect : 0;
+  drag(e, ev => {
+    const [u, v] = toUV(p, ev.clientX, ev.clientY);
+    const [lx, ly] = rotVec(u - u0, v - v0, -(o.rot || 0));
+    if (o.type === 'text') o.size = Math.max(4, Math.round(orig.size * (textW + lx) / textW * 2) / 2);
+    else if (o.type === 'mark') o.w = Math.max(4, orig.w + Math.max(lx, ly));
+    else if (o.type === 'image' && !ev.shiftKey) { o.w = Math.max(8, orig.w + lx); o.h = o.w / aspect; }
+    else { o.w = Math.max(3, orig.w + lx); o.h = Math.max(3, orig.h + ly); }
+    redraw(p);
+  }, () => { commit(before); syncProps(o); });
+}
+function startRect(p, u0, v0, e) {
+  const before = snap();
+  const o = {id: uid(), type: S.tool, x: u0, y: v0, w: 0, h: 0, rot: 0, color: S.tool === 'highlight' ? (props.color === '#000000' ? '#ffe600' : props.color) : props.color, width: props.width};
+  if (o.type === 'whiteout') o.color = '#ffffff';
+  p.objs.push(o);
+  drag(e, ev => {
+    const [u, v] = toUV(p, ev.clientX, ev.clientY);
+    o.x = Math.min(u, u0); o.y = Math.min(v, v0); o.w = Math.abs(u - u0); o.h = Math.abs(v - v0);
+    redraw(p);
+  }, () => {
+    if (o.w < 2 || o.h < 2) { p.objs.splice(p.objs.indexOf(o), 1); redraw(p); return; }
+    commit(before);
+  });
+}
+function startInk(p, u, v, e) {
+  const before = snap();
+  const o = {id: uid(), type: 'ink', pts: [[u, v]], color: props.color, width: props.width};
+  p.objs.push(o); select(p, null); redraw(p);
+  const paths = () => objEl(p, o)?.querySelectorAll('path');
+  drag(e, ev => {
+    const evs = ev.getCoalescedEvents ? ev.getCoalescedEvents() : [ev];
+    for (const ce of (evs.length ? evs : [ev])) {
+      const [a, b] = toUV(p, ce.clientX, ce.clientY), last = o.pts[o.pts.length - 1];
+      if (Math.hypot(a - last[0], b - last[1]) * S.scale >= 1) o.pts.push([a, b]);
+    }
+    const d = pathFor(o); paths()?.forEach(pa => pa.setAttribute('d', d));
+  }, () => { commit(before); redraw(p); });
+}
+// an image object sized to fit inside box {x, y, w, h, rot} (overlay units), centered, keeping its shape
+function fitImage(imgId, box, pad = 2) {
+  const a = S.images.get(imgId).aspect;
+  let w = box.w - pad * 2, h = w / a;
+  if (h > box.h - pad * 2) { h = box.h - pad * 2; w = h * a; }
+  const [dx, dy] = rotVec((box.w - w) / 2, (box.h - h) / 2, box.rot || 0);
+  return {type: 'image', img: imgId, x: box.x + dx, y: box.y + dy, w, h, rot: box.rot || 0};
+}
+function placeImage(p, u, v, imgId, width) {
+  const im = S.images.get(imgId), R = dims(p).R;
+  const w = width || Math.max(60, Math.min(220, im.natW * 0.75)), h = w / im.aspect, [dx, dy] = rotVec(-w / 2, -h / 2, R);
+  const o = {id: uid(), type: 'image', img: imgId, x: u + dx, y: v + dy, w, h, rot: R};
+  pushUndo(); p.objs.push(o); select(p, o);
+}
+
+// text positions are looked up ahead of time so a click with Edit text starts editing before the next keystroke
+function textContent(p) {
+  const src = S.sources[p.src];
+  if (!src.text.has(p.idx)) src.text.set(p.idx, getPage(p.src, p.idx).then(pg => pg.getTextContent()));
+  return src.text.get(p.idx);
+}
+function prefetchText() { S.pages.forEach(textContent); }
+// Keys typed while a lookup runs are held and typed into that box once editing starts.
+// Quick successive clicks are handled in order, each with its own held keys.
+let editChain = Promise.resolve();
+function editExisting(p, u, v) {
+  const keys = S.editKeys = [];
+  editChain = editChain.then(async () => {
+    finishEditing();
+    try { await editExistingAt(p, u, v); } catch (e) { console.error(e); }
+    if (S.editKeys === keys) S.editKeys = null;
+    if (keys.length && S.editing) document.execCommand('insertText', false, keys.join(''));
+  });
+}
+async function editExistingAt(p, u, v) {
+  const pg = await getPage(p.src, p.idx), tc = await textContent(p), px = p.view[0] + u, py = p.view[3] - v;
+  let hit = null;
+  for (const it of tc.items) {
+    if (!it.str || !it.str.trim()) continue;
+    const [a, b, c, d, e, f] = it.transform, th = Math.atan2(b, a), h = Math.hypot(c, d) || it.height;
+    const dx = px - e, dy = py - f;
+    const al = dx * Math.cos(th) + dy * Math.sin(th), pe = -dx * Math.sin(th) + dy * Math.cos(th);
+    if (al >= -1 && al <= it.width + 1 && pe >= -0.3 * h && pe <= h) { hit = {it, th, h, e, f}; break; }
+  }
+  if (!hit) return toast('No text found there. Use the Text tool to add new text.');
+  const {it, th, h, e, f} = hit, rot = Math.round(th * 180 / Math.PI * 100) / 100;
+  const local = (al, pe) => [e + al * Math.cos(th) - pe * Math.sin(th), f + al * Math.sin(th) + pe * Math.cos(th)];
+  const toUv = ([x, y]) => [x - p.view[0], p.view[3] - y];
+  const pad = Math.max(1, h * 0.08), top = h * 0.95 + pad, bot = -h * 0.25 - pad;
+  // font family and weight from the embedded font name when pdf.js has it loaded
+  let fam = 'helv', bold = false;
+  const style = tc.styles[it.fontName] || {};
+  if (style.fontFamily === 'serif') fam = 'times'; else if (style.fontFamily === 'monospace') fam = 'courier';
+  try {
+    const fo = pg.commonObjs.has(it.fontName) && pg.commonObjs.get(it.fontName);
+    const nm = fo && fo.name || '';
+    if (/times|serif|roman|garamond|georgia|cambria|minion|book/i.test(nm) && !/sans/i.test(nm)) fam = 'times';
+    if (/courier|mono|consol/i.test(nm)) fam = 'courier';
+    bold = /bold|black|heavy|semibold|demi/i.test(nm) || !!fo?.bold;
+  } catch {}
+  const [wx, wy] = toUv(local(-pad, top));
+  const white = {id: uid(), type: 'whiteout', x: wx, y: wy, w: it.width + 2 * pad, h: top - bot, rot, color: '#ffffff'};
+  const [tx, ty] = toUv(local(0, FONTS[fam].base * h));
+  const size = Math.round(h * 10) / 10;
+  const text = {id: uid(), type: 'text', x: tx, y: ty, text: it.str.replace(/\s+$/, ''), size, font: fam, bold, color: sampleInk(p, it, local, toUv) || '#000000', rot};
+  pushUndo(); p.objs.push(white, text); select(p, text);
+  startEdit(p, text, false, true);
+}
+// darkest pixel under the original glyphs gives a decent guess at the text color
+function sampleInk(p, it, local, toUv) {
+  try {
+    const d = DOM.get(p.id), {W, H, R} = dims(p), m = ovMatrix(R, S.scale, W, H), k = d.cv.width / parseFloat(d.el.style.width);
+    const h = Math.hypot(it.transform[2], it.transform[3]);
+    const pts = [local(0, 0), local(it.width, 0), local(0, h * 0.7), local(it.width, h * 0.7)].map(toUv).map(([u, v]) => [(m[0] * u + m[2] * v + m[4]) * k, (m[1] * u + m[3] * v + m[5]) * k]);
+    const x0 = Math.max(0, Math.floor(Math.min(...pts.map(q => q[0])))), y0 = Math.max(0, Math.floor(Math.min(...pts.map(q => q[1]))));
+    const x1 = Math.min(d.cv.width, Math.ceil(Math.max(...pts.map(q => q[0])))), y1 = Math.min(d.cv.height, Math.ceil(Math.max(...pts.map(q => q[1]))));
+    if (x1 - x0 < 1 || y1 - y0 < 1) return null;
+    const px = d.cv.getContext('2d').getImageData(x0, y0, x1 - x0, y1 - y0).data;
+    let best = 765, bi = -1;
+    for (let i = 0; i < px.length; i += 4) { const s = px[i] + px[i + 1] + px[i + 2]; if (px[i + 3] > 200 && s < best) { best = s; bi = i; } }
+    if (bi < 0 || best > 600) return null;
+    if (best < 90) return '#000000';
+    return '#' + [px[bi], px[bi + 1], px[bi + 2]].map(c => c.toString(16).padStart(2, '0')).join('');
+  } catch { return null; }
+}
+
+function startEdit(p, o, recordUndo, selectAll) {
+  if (S.editing) return;
+  const el = objEl(p, o); if (!el) return;
+  if (recordUndo) pushUndo();
+  S.editing = {p, o, el};
+  el.querySelector('.handle')?.remove();
+  el.setAttribute('contenteditable', 'plaintext-only');
+  el.focus();
+  const sel = getSelection(), r = document.createRange();
+  r.selectNodeContents(el); if (!selectAll) r.collapse(false);
+  sel.removeAllRanges(); sel.addRange(r);
+  el.oninput = () => { o.text = el.innerText.replace(/\n$/, ''); scheduleSave(); };
+  el.onblur = () => finishEditing();
+}
+function finishEditing() {
+  const ed = S.editing; if (!ed) return;
+  S.editing = null;
+  const {p, o, el} = ed;
+  el.onblur = null;
+  o.text = el.innerText.replace(/\n$/, '');
+  if (!o.text.trim()) { p.objs.splice(p.objs.indexOf(o), 1); if (S.sel?.oid === o.id) S.sel = null; }
+  redraw(p); updateUI();
+}
+function deleteSel() {
+  const s = findSel(); if (!s) return;
+  finishEditing();
+  if (!findSel()) return;
+  pushUndo(); s.p.objs.splice(s.p.objs.indexOf(s.o), 1); S.sel = null; redraw(s.p); updateUI();
+}
+
+// ---------- tools & properties ----------
+function setTool(t) {
+  if (S.tool === t) return;
+  S.tool = t;
+  if (t === 'edit') prefetchText();
+  document.querySelectorAll('button[data-tool]').forEach(b => b.classList.toggle('on', b.dataset.tool === t));
+  DOM.forEach(d => d.ov.className = 'ov t-' + t);
+  $('#mToolName').textContent = toolName();
+  updateHint();
+  EXT.toolChanged?.(t);
+}
+const DATE_FORMATS = {
+  mdy: d => `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()}`,
+  long: d => d.toLocaleDateString('en-US', {month: 'long', day: 'numeric', year: 'numeric'}),
+  short: d => d.toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'}),
+  iso: d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`,
+  dmy: d => `${d.getDate()} ${d.toLocaleDateString('en-US', {month: 'short'})} ${d.getFullYear()}`,
+};
+let dateFmt = 'mdy';
+try { const f = localStorage.getItem('pdfedit.datefmt'); if (DATE_FORMATS[f]) dateFmt = f; } catch {}
+const todayStr = () => DATE_FORMATS[dateFmt](new Date());
+function fillDate(el) {
+  const fi = +el.dataset.fi, fd = S.fields[fi];
+  if (fd.type !== 'text' || el.disabled) return;
+  el._before = snap(); el.value = todayStr(); setField(fi, el.value, el);
+}
+// touch screens: "tap" instead of "click", and no keyboard or mouse instructions
+const TOUCH_HINTS = {
+  select: 'Tap something you added to select it, then drag to move it, or use Duplicate, Copy and Delete above it.',
+  text: 'Tap anywhere to start typing. Tap away to finish.',
+  edit: 'Tap words in the PDF to retype them (covers the original).',
+};
+const hintText = t => matchMedia('(pointer: coarse)').matches ? TOUCH_HINTS[t] || HINTS[t].replace(/\bClick/g, 'Tap').replace(/\bclick/g, 'tap') : HINTS[t];
+function updateHint() {
+  const h = $('#hint'); h.textContent = S.pages.length ? hintText(S.tool) : '';
+  if (S.tool === 'date' && S.pages.length) {
+    const sel = document.createElement('select'); sel.title = 'Date format';
+    for (const k in DATE_FORMATS) sel.appendChild(new Option(DATE_FORMATS[k](new Date()), k));
+    sel.value = dateFmt;
+    sel.onchange = () => { dateFmt = sel.value; try { localStorage.setItem('pdfedit.datefmt', dateFmt); } catch {} };
+    h.appendChild(sel);
+  }
+  if (S.tool === 'sign' && S.sig && S.pages.length) {
+    const b = document.createElement('button'); b.textContent = 'Draw a new signature'; b.onclick = openSig; h.appendChild(b);
+  }
+  if (S.tool === 'image' && S.pendingImg && S.pages.length) {
+    const b = document.createElement('button'); b.textContent = 'Choose a different image'; b.onclick = () => $('#imgIn').click(); h.appendChild(b);
+  }
+  if (typeof renderPrepKinds === 'function') renderPrepKinds();   // sign.js field buttons show the active kind
+}
+document.querySelectorAll('#tools button').forEach(b => b.onclick = () => {
+  finishEditing();
+  const t = b.dataset.tool;
+  if (t === 'sign' && !S.sig) { setTool('sign'); return openSig(); }
+  if (t === 'image') { setTool('image'); return $('#imgIn').click(); }
+  setTool(t);
+});
+function propChange(key, val) {
+  props[key] = val;
+  const s = findSel(); if (!s) return;
+  const {p, o} = s;
+  const applies = {font: o.type === 'text', bold: o.type === 'text', size: o.type === 'text' || o.type === 'mark',
+    color: o.type !== 'whiteout' && o.type !== 'image' && o.type !== 'redact', width: o.type === 'ink' || o.type === 'box'}[key];
+  if (!applies) return;
+  // inputs can report the same value again (a number box fires "change" on blur), which isn't an edit
+  if ((key === 'size' && o.type === 'mark' ? o.w : o[key]) === val) return;
+  if (!S.editing) pushUndo();
+  if (key === 'size' && o.type === 'mark') o.w = val; else o[key] = val;
+  if (S.editing && S.editing.o === o) styleText(S.editing.el, o); else redraw(p);
+  S.dirty = true;
+}
+$('#pFont').onchange = e => propChange('font', e.target.value);
+$('#pSize').onchange = e => { const v = parseFloat(e.target.value); if (v > 0) propChange('size', v); };
+$('#pBold').onchange = e => propChange('bold', e.target.checked);
+$('#pColor').onchange = e => propChange('color', e.target.value);
+$('#pWidth').onchange = e => { const v = parseFloat(e.target.value); if (v > 0) propChange('width', v); };
+// keep focus in the text being edited when using the toolbar
+document.querySelector('header').addEventListener('pointerdown', e => {
+  if (S.editing && e.target.closest('button')) e.preventDefault();
+});
+
+function updateUI() {
+  scheduleSave();
+  const has = S.pages.length > 0;
+  $('#bSave').disabled = !has; $('#bAdd').disabled = !has; $('#bClose').disabled = !has;
+  const saveTip = S.fileHandle ? `Save over ${S.fileHandle.name} (Ctrl+S). Ctrl+Shift+S saves a copy instead.` : 'Save a copy with your changes (Ctrl+S)';
+  $('#bSave').removeAttribute('title'); $('#bSave').dataset.tip = saveTip;
+  $('#bUndo').disabled = !S.undo.length; $('#bRedo').disabled = !S.redo.length;
+  $('#bPaste').disabled = !lastCopy || !has;
+  $('#bDel').disabled = !findSel();
+  $('#zoomLbl').textContent = Math.round(S.scale * 100) + '%';
+  $('#flattenWrap').hidden = !S.fields.length;
+  document.querySelectorAll('button[data-tool]').forEach(b => { b.disabled = !has; b.classList.toggle('on', b.dataset.tool === S.tool); });
+  $('#bSignReq').disabled = !has;
+  $('#mUndo').disabled = !S.undo.length; $('#mSave').disabled = !has; $('#mTools').disabled = !has; $('#mStyle').disabled = !has;
+  $('#mToolName').textContent = toolName();
+  EXT.updateUI?.(has);
+  updateHint();
+  if (typeof renderPrep === 'function' && !$('#prep').hidden && !$('#prep').contains(document.activeElement)) renderPrep();   // keep field counts current
+  if (typeof renderFormPrep === 'function' && !$('#formPrep').hidden && !$('#formPrep').contains(document.activeElement)) renderFormPrep();   // show the selected field's settings
+}
+
+// ---------- signature & images ----------
+const pad = $('#sigPad');
+let padCtx, padDirty = false, padUse = null, padCancel = null;
+// The drawing pad, shared by the Sign tool and by signers filling signature / initials fields.
+function openPad(title, onUse, onCancel, {remember = true} = {}) {
+  padUse = onUse; padCancel = onCancel || null;
+  $('#sigTitle').textContent = title;
+  $('#sigRemember').closest('label').hidden = !remember;
+  if (!remember) $('#sigRemember').checked = false;
+  const dpr = window.devicePixelRatio || 1;
+  $('#sigDlg').showModal();
+  const r = pad.getBoundingClientRect();
+  pad.width = r.width * dpr; pad.height = r.height * dpr;
+  padCtx = pad.getContext('2d'); padCtx.scale(dpr, dpr);
+  padCtx.lineCap = padCtx.lineJoin = 'round'; padCtx.lineWidth = 2.6;
+  padCtx.strokeStyle = props.color === '#ffffff' ? '#000000' : props.color;
+  padDirty = false;
+}
+pad.addEventListener('pointerdown', e => {
+  const r = pad.getBoundingClientRect(); let last = [e.clientX - r.left, e.clientY - r.top];
+  padCtx.beginPath(); padCtx.arc(last[0], last[1], 1.3, 0, 7); padCtx.fillStyle = padCtx.strokeStyle; padCtx.fill();
+  padDirty = true; pad.setPointerCapture(e.pointerId);
+  const mv = ev => {
+    const pts = ev.getCoalescedEvents ? ev.getCoalescedEvents() : [ev];
+    for (const ce of (pts.length ? pts : [ev])) {
+      const q = [ce.clientX - r.left, ce.clientY - r.top];
+      padCtx.beginPath(); padCtx.moveTo(...last); padCtx.lineTo(...q); padCtx.stroke(); last = q;
+    }
+  };
+  pad.addEventListener('pointermove', mv);
+  pad.addEventListener('pointerup', () => pad.removeEventListener('pointermove', mv), {once: true});
+});
+$('#sigClear').onclick = () => { padCtx.clearRect(0, 0, pad.width, pad.height); padDirty = false; };
+$('#sigCancel').onclick = () => { $('#sigDlg').close(); padCancel?.(); };
+$('#sigUse').onclick = async () => {
+  if (!padDirty) return toast('Draw it first');
+  const url = trimCanvas(pad);
+  $('#sigDlg').close();
+  await padUse(url, $('#sigRemember').checked);
+};
+function openSig() {
+  openPad('Draw your signature', async (url, remember) => {
+    await setSignature(url);
+    try { remember ? localStorage.setItem('pdfedit.sig', url) : localStorage.removeItem('pdfedit.sig'); } catch {}
+    setTool('sign'); updateHint(); toast('Now click where it goes');
+  }, () => { if (!S.sig) setTool('select'); });
+}
+async function setSignature(url) {
+  const img = await loadImageUrl(url), id = 'sig' + Date.now();   // never collides with ids restored from a saved session
+  S.images.set(id, {url, aspect: img.naturalWidth / img.naturalHeight, natW: img.naturalWidth});
+  S.sig = {img: id};
+}
+function trimCanvas(c) {
+  const ctx = c.getContext('2d'), {width: w, height: h} = c, d = ctx.getImageData(0, 0, w, h).data;
+  let x0 = w, y0 = h, x1 = 0, y1 = 0;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (d[(y * w + x) * 4 + 3] > 10) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  const m = 6; x0 = Math.max(0, x0 - m); y0 = Math.max(0, y0 - m); x1 = Math.min(w - 1, x1 + m); y1 = Math.min(h - 1, y1 + m);
+  const out = document.createElement('canvas'); out.width = x1 - x0 + 1; out.height = y1 - y0 + 1;
+  out.getContext('2d').drawImage(c, x0, y0, out.width, out.height, 0, 0, out.width, out.height);
+  return out.toDataURL('image/png');
+}
+// returns the new image id, or null if the file isn't a readable image
+async function addImageFile(f) {
+  let url = await new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(f); });
+  let img;
+  try { img = await loadImageUrl(url); } catch { return null; }
+  if (!/^data:image\/(png|jpeg)/.test(url)) {   // PDFs only take PNG/JPEG
+    const c = document.createElement('canvas'); c.width = img.naturalWidth; c.height = img.naturalHeight;
+    c.getContext('2d').drawImage(img, 0, 0); url = c.toDataURL('image/png');
+  }
+  const id = 'img' + uid();
+  S.images.set(id, {url, aspect: img.naturalWidth / img.naturalHeight, natW: img.naturalWidth});
+  return id;
+}
+$('#imgIn').onchange = async e => {
+  const f = e.target.files[0]; e.target.value = '';
+  if (!f) { if (!S.pendingImg) setTool('select'); return; }
+  const id = await addImageFile(f);
+  if (!id) { if (!S.pendingImg) setTool('select'); return toast('Could not read that image', true); }
+  S.pendingImg = id; setTool('image'); updateHint(); toast('Now click where it goes');
+};
+
+// ---------- copy / paste ----------
+const CLIP_TYPE = 'application/x-pdfedit';
+let lastClient = null, lastPaste = null;
+// last place the mouse or a finger was on the document (taps don't move a pointer, so track down too)
+for (const t of ['pointermove', 'pointerdown']) $('#view').addEventListener(t, e => { lastClient = [e.clientX, e.clientY]; });
+// paste lands under the mouse when it is over a page, otherwise mid-screen on the page in view
+function pastePoint() {
+  const vr = $('#view').getBoundingClientRect();
+  let [cx, cy] = lastClient || [vr.left + vr.width / 2, vr.top + vr.height / 2];
+  let el = document.elementFromPoint(cx, cy)?.closest('.page');
+  if (!el) {
+    cx = vr.left + vr.width / 2; cy = vr.top + vr.height / 2;
+    let best = Infinity;
+    for (const [, d] of DOM) {
+      const r = d.el.getBoundingClientRect(), dist = cy < r.top ? r.top - cy : cy > r.bottom ? cy - r.bottom : 0;
+      if (dist < best) { best = dist; el = d.el; }
+    }
+    if (!el) return null;
+    const r = el.getBoundingClientRect();
+    cx = Math.min(Math.max(cx, r.left + 20), r.right - 20); cy = Math.min(Math.max(cy, r.top + 20), r.bottom - 20);
+  }
+  const p = pageById(+el.dataset.pid); if (!p) return null;
+  let [u, v] = toUV(p, cx, cy);
+  // pasting again without moving the mouse cascades instead of stacking exactly
+  if (lastPaste && lastPaste.pid === p.id && lastPaste.cx === cx && lastPaste.cy === cy) { lastPaste.n++; }
+  else lastPaste = {pid: p.id, cx, cy, n: 0};
+  const [dx, dy] = rotVec(12 * lastPaste.n, 12 * lastPaste.n, dims(p).R);
+  return {p, u: u + dx, v: v + dy};
+}
+function textWidth(o) {
+  const ctx = (textWidth.c ||= document.createElement('canvas').getContext('2d'));
+  ctx.font = `${o.bold ? 700 : 400} ${o.size}px ${FONTS[o.font].css}`;
+  return Math.max(...o.text.split('\n').map(l => ctx.measureText(l).width));
+}
+function objCenter(o) {
+  if (o.type === 'ink') {
+    const xs = o.pts.map(q => q[0]), ys = o.pts.map(q => q[1]);
+    return [(Math.min(...xs) + Math.max(...xs)) / 2, (Math.min(...ys) + Math.max(...ys)) / 2];
+  }
+  const w = o.type === 'text' ? textWidth(o) : o.w;
+  const h = o.type === 'text' ? o.text.split('\n').length * LH * o.size : o.type === 'mark' ? o.w : o.h;
+  const [dx, dy] = rotVec(w / 2, h / 2, o.rot || 0);
+  return [o.x + dx, o.y + dy];
+}
+function clipPayload(s) {
+  const o = s.o;
+  return JSON.stringify({o, pageRot: dims(s.p).R, imgUrl: o.type === 'image' ? S.images.get(o.img).url : undefined});
+}
+// clipboard events target the stale text selection, not focus, so check focus instead
+// (signing links are read-only, so they behave as if typing: the browser's own copy/paste only)
+const focusInField = () => S.mode !== 'edit' || !!S.editing || !!document.activeElement?.matches('input, textarea, select, [contenteditable]');
+let lastCopy = null;   // fallback when the browser drops the custom clipboard type
+function onCopy(e, cut) {
+  if (focusInField()) return;
+  const s = findSel(); if (!s) return;
+  e.preventDefault();
+  const json = clipPayload(s), text = s.o.type === 'text' ? s.o.text : '';
+  e.clipboardData.setData(CLIP_TYPE, json);
+  if (text) e.clipboardData.setData('text/plain', text);
+  lastCopy = {json, text}; lastPaste = null;
+  if (cut) deleteSel(); else toast('Copied');
+}
+// Puts a copied item down centered on tgt: keyboard paste, the Paste menu item and Duplicate all use this.
+async function pasteItem(json, tgt) {
+  const {p, u, v} = tgt, R = dims(p).R;
+  const {o, pageRot, imgUrl} = JSON.parse(json);
+  o.id = uid();
+  if (o.type === 'image' && !S.images.has(o.img)) {
+    const im = await loadImageUrl(imgUrl);
+    S.images.set(o.img, {url: imgUrl, aspect: im.naturalWidth / im.naturalHeight, natW: im.naturalWidth});
+  }
+  if (o.type === 'ffield') freshFormName(o);   // forms.js: a copy is its own field, so it gets its own name
+  // keep things upright when pasting between pages with different rotation
+  if (o.type !== 'ink' && (o.rot || 0) === pageRot) o.rot = R;
+  const [cu, cv] = objCenter(o), du = u - cu, dv = v - cv;
+  if (o.type === 'ink') o.pts = o.pts.map(([a, b]) => [a + du, b + dv]); else { o.x += du; o.y += dv; }
+  pushUndo(); p.objs.push(o); select(p, o);
+}
+// buttons for phones (and anyone): copy the selected item, duplicate it, paste the last copy
+function copySel() {
+  const s = findSel(); if (!s) return;
+  lastCopy = {json: clipPayload(s), text: s.o.type === 'text' ? s.o.text : ''}; lastPaste = null;
+  toast(matchMedia('(pointer: coarse)').matches ? 'Copied. Tap where you want it, then Menu, Paste.' : 'Copied. Click where you want it, then Ctrl+V (or Paste in the toolbar).'); updateUI();
+}
+async function duplicateSel() {
+  const s = findSel(); if (!s) return;
+  finishEditing();
+  const [cu, cv] = objCenter(s.o), [dx, dy] = rotVec(14, 14, dims(s.p).R);
+  await pasteItem(clipPayload(s), {p: s.p, u: cu + dx, v: cv + dy});
+}
+async function pasteLast() {
+  if (!lastCopy) return toast('Copy something first');
+  const tgt = pastePoint(); if (tgt) await pasteItem(lastCopy.json, tgt);
+}
+document.addEventListener('copy', e => onCopy(e, false));
+document.addEventListener('cut', e => onCopy(e, true));
+document.addEventListener('paste', async e => {
+  if (focusInField() || !S.pages.length) return;
+  const cd = e.clipboardData;
+  let json = cd.getData(CLIP_TYPE);
+  const text = cd.getData('text/plain');
+  if (!json && lastCopy && text === lastCopy.text) json = lastCopy.json;
+  const file = [...cd.files].find(f => f.type.startsWith('image/'));
+  if (!json && !file && !text) return;
+  e.preventDefault();
+  const tgt = pastePoint(); if (!tgt) return;
+  const {p, u, v} = tgt, R = dims(p).R;
+  if (json) await pasteItem(json, tgt);
+  else if (file) {
+    const id = await addImageFile(file);
+    if (!id) return toast('Could not read that image', true);
+    placeImage(p, u, v, id, null);
+  } else {
+    const t = text.replace(/\r\n?/g, '\n').replace(/\t/g, '    ').replace(/\n+$/, '');
+    const [dx, dy] = rotVec(0, -props.size * 0.6, R);
+    const o = {id: uid(), type: 'text', x: u + dx, y: v + dy, text: t, size: props.size, font: props.font, bold: props.bold, color: props.color, rot: R};
+    pushUndo(); p.objs.push(o); select(p, o);
+  }
+});
+try { const saved = localStorage.getItem('pdfedit.sig'); if (saved) setSignature(saved); } catch {}
+
+// ---------- export ----------
+function hasForm(doc) { return !!doc.catalog.get(PDFName.of('AcroForm')); }
+// pdf-lib can't remove or flatten some fields (an empty signature box with no appearance throws
+// "Unexpected N type"), so when it fails the field's widgets and the field are unlinked by hand
+function removeFormField(doc, form, field) {
+  try { form.removeField(field); return; } catch {}
+  const widgets = new Set(field.acroField.getWidgets().map(w => w.dict));
+  for (const page of doc.getPages()) {
+    const annots = page.node.Annots(); if (!annots) continue;
+    for (let i = annots.size() - 1; i >= 0; i--) if (widgets.has(doc.context.lookup(annots.get(i)))) annots.remove(i);
+  }
+  form.acroForm.removeField(field.acroField);
+}
+function flattenForm(doc) {
+  const form = doc.getForm();
+  // an unsigned signature box has nothing to keep, and pdf-lib can't flatten one without an appearance
+  for (const f of form.getFields()) if (f instanceof PDFLib.PDFSignature && !f.acroField.dict.get(PDFName.of('V'))) removeFormField(doc, form, f);
+  form.flatten();
+}
+function applyFields(doc, si) {
+  // signature fields someone signed here: the drawn signature replaces the field (readers would draw
+  // the empty field over it), the way a signed paper form is just ink
+  const signedHere = S.fields.map((fd, fi) => ({fd, fi})).filter(({fd, fi}) => fd.src === si && fd.type === 'sig' &&
+    S.pages.some(p => p.objs.some(o => o.forSig?.startsWith(fi + ':'))));
+  if (signedHere.length) {
+    const form = doc.getForm();
+    for (const {fd} of signedHere) { try { removeFormField(doc, form, form.getField(fd.name)); } catch (e) { console.warn('could not remove signed field', fd.name, e); } }
+  }
+  // fields handed to signers were replaced by fillable-field objects; drop the originals so they
+  // aren't doubled (Save re-creates them under the same names; signing has signers fill them)
+  const adopted = S.fields.filter(fd => fd.src === si && fd.adopted);
+  if (adopted.length) {
+    const form = doc.getForm();
+    for (const fd of adopted) { try { removeFormField(doc, form, form.getField(fd.name)); } catch (e) { console.warn('could not remove adopted field', fd.name, e); } }
+  }
+  const changed = S.fields.filter(fd => fd.src === si && !fd.readOnly && !fd.adopted && fd.type !== 'sig' && JSON.stringify(fd.value) !== fd.orig);
+  if (!changed.length) return;
+  const form = doc.getForm();
+  for (const fd of changed) {
+    let f; try { f = form.getField(fd.name); } catch { continue; }
+    if (fd.type === 'text') f.setText(fd.value || undefined);
+    else if (fd.type === 'check') fd.value ? f.check() : f.uncheck();
+    else if (fd.type === 'radio') fd.value ? f.select(fd.value) : f.clear();
+    else if (fd.type === 'dropdown') fd.value ? f.select(fd.value) : f.clear();
+    else if (fd.type === 'list') fd.value.length ? f.select(fd.value) : f.clear();
+  }
+}
+// pdf-lib cannot write into encrypted files, so their pages are re-drawn as images
+async function rasterize(si) {
+  const src = S.sources[si], doc = await PDFDocument.create(), k = 200 / 72;
+  for (let i = 0; i < src.js.numPages; i++) {
+    const pg = await getPage(si, i), vp = pg.getViewport({scale: k, rotation: 0});
+    const c = document.createElement('canvas'); c.width = Math.round(vp.width); c.height = Math.round(vp.height);
+    const ctx = c.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height);
+    await queueRender(() => pg.render({canvasContext: ctx, viewport: vp, annotationMode: pdfjsLib.AnnotationMode.ENABLE}).promise, true);
+    const jpg = await doc.embedJpg(c.toDataURL('image/jpeg', 0.9));
+    const W = pg.view[2] - pg.view[0], H = pg.view[3] - pg.view[1];
+    doc.addPage([W, H]).drawImage(jpg, {x: 0, y: 0, width: W, height: H});
+  }
+  return doc;
+}
+// font and image embedding for a pdf-lib document, each embedded once
+function embedders(doc) {
+  const fonts = {}, imgs = {};
+  return {
+    font: k => fonts[k] || (fonts[k] = doc.embedFont(StandardFonts[k])),
+    image: id => imgs[id] || (imgs[id] = S.images.get(id).url.startsWith('data:image/jpeg') ? doc.embedJpg(S.images.get(id).url) : doc.embedPng(S.images.get(id).url)),
+  };
+}
+async function buildPdf(opts = {}) {
+  const flatten = opts.flatten ?? $('#flatten').checked, baseSrc = S.pages[0].src;
+  const used = [...new Set(S.pages.map(p => p.src))], libs = new Map(), raster = new Set();
+  for (const si of used) {
+    let doc = await PDFDocument.load(S.sources[si].bytes, {ignoreEncryption: true});
+    if (doc.isEncrypted) { doc = await rasterize(si); raster.add(si); }
+    else {
+      applyFields(doc, si);
+      // fields can't survive being copied into another file, so merged-in forms get flattened
+      if ((flatten || si !== baseSrc) && hasForm(doc)) flattenForm(doc);
+    }
+    libs.set(si, doc);
+  }
+  const base = libs.get(baseSrc), copied = new Map();
+  for (const si of used) if (si !== baseSrc) {
+    const idxs = [...new Set(S.pages.filter(p => p.src === si).map(p => p.idx))];
+    const cps = await base.copyPages(libs.get(si), idxs);
+    idxs.forEach((ix, k) => copied.set(si + ':' + ix, cps[k]));
+  }
+  const basePages = base.getPages();
+  const order = S.pages.map(p => p.src === baseSrc ? basePages[p.idx] : copied.get(p.src + ':' + p.idx));
+  for (let i = base.getPageCount() - 1; i >= 0; i--) base.removePage(i);
+  order.forEach(pg => base.addPage(pg));
+
+  const {font, image} = embedders(base), entries = [];
+  for (let i = 0; i < S.pages.length; i++) {
+    const p = S.pages[i], pg = order[i], {W, H, R} = dims(p);
+    pg.setRotation(degrees(R));
+    // rasterized pages start at 0,0; p.full is the page's own box when it has been cropped
+    const f = p.full || p.view, view = raster.has(p.src) ? [p.view[0] - f[0], p.view[1] - f[1], p.view[2] - f[0], p.view[3] - f[1]] : p.view;
+    if (p.full) pg.setCropBox(view[0], view[1], view[2] - view[0], view[3] - view[1]);
+    for (const o of p.objs) await drawObj(pg, o, view, font, image);
+    entries.push({p, pg, view});
+  }
+  // forms.js: "Make fillable" fields become real form fields, except when sending for signing,
+  // where signers fill them on the signing page instead
+  if (opts.formFields !== false) addFormFields(base, entries);
+  return EXT.finish ? EXT.finish(base, opts, entries) : base.save();   // tools.js
+}
+async function drawObj(pg, o, view, font, image) {
+  const P = (u, v) => [view[0] + u, view[3] - v];
+  const L = (lx, ly) => { const [dx, dy] = rotVec(lx, ly, o.rot || 0); return P(o.x + dx, o.y + dy); };
+  const rotate = degrees(o.rot || 0);
+  if (EXT.draw[o.type]) return EXT.draw[o.type](pg, o, view, {P, L, rotate, font, image});   // tools.js
+  switch (o.type) {
+    case 'text': {
+      const F = FONTS[o.font], f = await font(F.std[o.bold ? 1 : 0]);
+      o.text.split('\n').forEach((line, i) => {
+        if (!line) return;
+        const [x, y] = L(0, (i * LH + F.base) * o.size);
+        pg.drawText(line, {x, y, size: o.size, font: f, color: hexRgb(o.color), rotate, opacity: o.opacity ?? 1});
+      });
+      break;
+    }
+    case 'whiteout': case 'highlight': case 'box': {
+      const [x, y] = L(0, o.h), opt = {x, y, width: o.w, height: o.h, rotate};
+      if (o.type === 'whiteout') opt.color = rgb(1, 1, 1);
+      else if (o.type === 'highlight') { opt.color = hexRgb(o.color); opt.opacity = 0.4; if (PDFLib.BlendMode) opt.blendMode = PDFLib.BlendMode.Multiply; }
+      else { opt.borderColor = hexRgb(o.color); opt.borderWidth = o.width; }
+      pg.drawRectangle(opt);
+      break;
+    }
+    case 'image': {
+      const [x, y] = L(0, o.h);
+      pg.drawImage(await image(o.img), {x, y, width: o.w, height: o.h, rotate});
+      break;
+    }
+    case 'ink': case 'mark':
+      pg.drawSvgPath(pathFor(o), {x: view[0], y: view[3], borderColor: hexRgb(o.color), borderWidth: strokeW(o), borderLineCap: LineCapStyle.Round});
+      break;
+    case 'field': break;   // signing fields are layout for signers, never drawn by Save
+    case 'ffield': break;  // fillable fields become form fields in buildPdf (addFormFields), not drawings
+  }
+}
+async function save({copy = false} = {}) {
+  if (!S.pages.length) return;
+  finishEditing();
+  busy('Saving...');
+  let bytes;
+  try { bytes = await buildPdf(); }
+  catch (e) { console.error(e); busy(); return toast('Save failed: ' + e.message, true); }
+  busy();
+  // opened from the computer with the installed app: save over the original, like a desktop editor
+  if (S.fileHandle && !copy) {
+    try {
+      const h = S.fileHandle;
+      if (await h.queryPermission({mode: 'readwrite'}) !== 'granted' && await h.requestPermission({mode: 'readwrite'}) !== 'granted') throw new Error('permission declined');
+      const w = await h.createWritable(); await w.write(bytes); await w.close();
+      S.dirty = false; toast('Saved ' + h.name); return showThanks();
+    } catch (e) { console.warn('could not save over the original', e); toast('Couldn’t save over the original, so choose where to save a copy'); }
+  }
+  const name = (S.sources[S.pages[0].src].name || 'document.pdf').replace(/\.pdf$/i, '') + '-edited.pdf';
+  if (window.showSaveFilePicker) {
+    try {
+      const h = await showSaveFilePicker({suggestedName: name, types: [{description: 'PDF', accept: {'application/pdf': ['.pdf']}}]});
+      const w = await h.createWritable(); await w.write(bytes); await w.close();
+      S.dirty = false; toast('Saved ' + h.name); return showThanks();
+    } catch (e) { if (e.name === 'AbortError') return; console.warn('save picker failed, downloading instead', e); }
+  }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([bytes], {type: 'application/pdf'})); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 30000);
+  S.dirty = false; toast('Downloaded ' + name); showThanks();
+}
+
+// once per visit, right after a save (only when config.js lists tip links)
+let thanksShown = !APP.hasTips;
+if (APP.hasTips) { $('#emptyTips').append(...tipLinks(' · ')); $('#thanksTips').append(...tipLinks('', true)); }
+function showThanks() { if (thanksShown) return; thanksShown = true; $('#thanksSaved').hidden = false; $('#thanks').hidden = false; }
+$('#thanksClose').onclick = () => { $('#thanks').hidden = true; };
+$('#tipOpen').onclick = e => { e.preventDefault(); $('#thanksSaved').hidden = true; $('#thanks').hidden = false; };
+
+// ---------- tooltips ----------
+// The browser's own title tooltips are slow and easy to miss, so the title text moves
+// into data-tip on first hover and shows in a quick tooltip instead.
+const TIP_AREAS = 'header, #side, #thanks, .sidepanel';
+let tipTimer, tipFor = null;
+function hideTip() { clearTimeout(tipTimer); tipFor = null; $('#tip').classList.remove('show'); }
+document.addEventListener('pointerover', e => {
+  if (e.pointerType === 'touch') return;
+  const el = e.target.closest('[title], [data-tip]');
+  if (!el || !el.closest(TIP_AREAS)) return;
+  if (el.title) { el.dataset.tip = el.title; el.removeAttribute('title'); }
+  if (el === tipFor) return;
+  hideTip(); tipFor = el;
+  tipTimer = setTimeout(() => {
+    const t = $('#tip'), r = el.getBoundingClientRect();
+    t.textContent = el.dataset.tip;
+    const w = t.offsetWidth, h = t.offsetHeight;
+    let x = r.left + r.width / 2 - w / 2, y = r.bottom + 8;
+    if (y + h > innerHeight - 8) y = r.top - h - 8;
+    t.style.left = Math.max(8, Math.min(x, innerWidth - w - 8)) + 'px'; t.style.top = y + 'px';
+    t.classList.add('show');
+  }, 300);
+});
+document.addEventListener('pointerout', e => { if (tipFor && !tipFor.contains(e.relatedTarget)) hideTip(); });
+addEventListener('pointerdown', hideTip, true);
+addEventListener('scroll', hideTip, true);
+
+// ---------- zoom, files, keys ----------
+function setZoom(z) { finishEditing(); S.scale = Math.min(4, Math.max(0.25, z)); renderPages(); }
+$('#bZoomIn').onclick = () => setZoom(ZOOMS.find(z => z > S.scale + 0.01) || 4);
+$('#bZoomOut').onclick = () => setZoom([...ZOOMS].reverse().find(z => z < S.scale - 0.01) || 0.25);
+function fitScale() {
+  const maxW = Math.max(...S.pages.map(p => { const {W, H, R} = dims(p); return R % 180 ? H : W; }));
+  const pad = innerWidth <= 700 ? 24 : 48;   // #pages padding (8px on phones, 20px otherwise) plus a scrollbar
+  return Math.floor(($('#view').clientWidth - pad) / maxW * 100) / 100;
+}
+$('#bFit').onclick = () => { if (S.pages.length) setZoom(fitScale()); };
+// on phones and narrow windows, a freshly opened document starts fitted to the width
+function fitIfTooWide() { if (S.pages.length && fitScale() < S.scale) setZoom(fitScale()); }
+let openMode = false;
+$('#bOpen').onclick = $('#bOpen2').onclick = () => { openMode = false; $('#fileIn').click(); };
+$('#bAdd').onclick = () => { openMode = true; $('#fileIn').click(); };
+$('#fileIn').onchange = e => { const fs = [...e.target.files]; e.target.value = ''; if (fs.length) openFiles(fs, openMode); };
+$('#bSave').onclick = save;
+$('#bClose').onclick = async () => {
+  if (S.dirty && !confirm('Close without saving your changes?')) return;
+  finishEditing(); resetDoc(); document.title = APP.name; renderPages(); await persistState();
+  try { localStorage.removeItem(PENDING); } catch {}
+};
+$('#bUndo').onclick = undo; $('#bRedo').onclick = redo; $('#bDel').onclick = deleteSel; $('#bPaste').onclick = () => pasteLast();
+
+// ---------- phone toolbar ----------
+// On phones the toolbar groups are hidden behind a compact bar; each bar button shows one group
+// as a drop-down. Picking an action closes it; the style controls stay open while you adjust them.
+const PHONE_MENUS = {mMenu: 'm-menu', mTools: 'm-tools', mStyle: 'm-style'};
+function phoneMenu(id) {   // id of a bar button to toggle, or null to close all
+  for (const [b, cls] of Object.entries(PHONE_MENUS)) {
+    const on = b === id && !document.body.classList.contains(cls);
+    document.body.classList.toggle(cls, on);
+    $('#' + b).setAttribute('aria-expanded', on);
+  }
+}
+function toolName() {
+  if (S.tool === 'field' || S.tool === 'formfield') return 'Placing field';
+  return document.querySelector(`button[data-tool="${S.tool}"]`)?.textContent.trim() || 'Select';
+}
+for (const b of Object.keys(PHONE_MENUS)) $('#' + b).onclick = () => phoneMenu(b);
+$('#mUndo').onclick = undo;
+$('#mSave').onclick = () => save();
+document.querySelectorAll('#tools button, #gFile button, #gSign button, #gEdit button, #gZoom button, #bInstall')
+  .forEach(b => b.addEventListener('click', () => phoneMenu(null)));
+// with a drop-down open, a tap on the document only closes it (it shouldn't also add text or a box)
+$('#view').addEventListener('pointerdown', e => {
+  if (!Object.values(PHONE_MENUS).some(c => document.body.classList.contains(c))) return;
+  phoneMenu(null); e.stopPropagation(); e.preventDefault();
+}, true);
+
+addEventListener('dragover', e => { e.preventDefault(); document.body.classList.add('dragging'); });
+addEventListener('dragleave', e => { if (!e.relatedTarget) document.body.classList.remove('dragging'); });
+addEventListener('drop', e => {
+  e.preventDefault(); document.body.classList.remove('dragging');
+  if (e.dataTransfer.files.length) openFiles(e.dataTransfer.files, S.pages.length > 0);
+});
+// edits survive a refresh via IndexedDB, so only warn when that storage isn't working
+addEventListener('beforeunload', e => { if (S.dirty && !persistOk) { e.preventDefault(); e.returnValue = ''; } });
+addEventListener('keydown', e => {
+  if (S.editKeys && !e.ctrlKey && !e.metaKey && !e.altKey) {
+    if (e.key.length === 1) S.editKeys.push(e.key);
+    e.preventDefault(); return;
+  }
+  if (S.mode !== 'edit') return;   // signing links: no editor shortcuts
+  const typing = S.editing || e.target.matches('input, textarea, select, [contenteditable]');
+  const mod = e.ctrlKey || e.metaKey;
+  if (mod && e.key.toLowerCase() === 's') { e.preventDefault(); return save({copy: e.shiftKey}); }
+  if (mod && e.key.toLowerCase() === 'o') { e.preventDefault(); return $('#bOpen').click(); }
+  if (e.key === 'Escape') { if (S.editing) { finishEditing(); } else { select(null); setTool('select'); } return; }
+  if (typing) return;
+  if (mod && e.key.toLowerCase() === 'z') { e.preventDefault(); return e.shiftKey ? redo() : undo(); }
+  if (mod && e.key.toLowerCase() === 'y') { e.preventDefault(); return redo(); }
+  if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); return deleteSel(); }
+  const s = findSel();
+  if (s && e.key.startsWith('Arrow')) {
+    e.preventDefault();
+    const step = e.shiftKey ? 10 : 1, R = dims(s.p).R;
+    let [dx, dy] = {ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step]}[e.key];
+    [dx, dy] = rotVec(dx, dy, R);   // screen direction into page space
+    pushUndo();
+    if (s.o.type === 'ink') s.o.pts = s.o.pts.map(([a, b]) => [a + dx, b + dy]); else { s.o.x += dx; s.o.y += dy; }
+    return redraw(s.p);
+  }
+  if (mod || e.altKey || !S.pages.length) return;
+  const t = {v: 'select', t: 'text', e: 'edit', w: 'whiteout', h: 'highlight', r: 'box', d: 'draw', s: 'sign', i: 'image', a: 'date'}[e.key.toLowerCase()];
+  if (t) document.querySelector(`button[data-tool="${t}"]`).click();
+});
+updateUI();
+</script>
+<!-- signing requests; also decides at startup between a signing link and restoring the last session -->
+<script src="esign-info.js"></script>
+<script src="app-install.js"></script>
+<script src="forms.js"></script>
+<script src="tools.js"></script>
+<script src="review.js"></script>
+<script src="vendor/icons.js"></script>
+<script src="layout.js"></script>
+<script src="sign.js"></script>
+</body>
+</html>

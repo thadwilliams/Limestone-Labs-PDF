@@ -1,0 +1,76 @@
+<!doctype html>
+<!-- Copyright 2026 Limestone Labs LLC. SPDX-License-Identifier: Apache-2.0 -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Verify a Signed PDF</title>
+<meta name="description" content="Check that a PDF signed with this editor is the exact file that was signed, without uploading it.">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<script src="config.js"></script>
+<script src="brand.js"></script>
+<style>
+:root{--bg:#e9ebee;--panel:#fff;--ink:#1d2129;--muted:#667085;--line:#d0d5dd;--accent:#2563eb;--ok:#2b8a3e;--bad:#c0362c}
+@media (prefers-color-scheme: dark){:root{--bg:#1b1d21;--panel:#26292e;--ink:#e6e8eb;--muted:#9aa1ab;--line:#3a3f46;--accent:#5b8cff;--ok:#51cf66;--bad:#ff6b5e}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,"Segoe UI",sans-serif}
+main{max-width:640px;margin:0 auto;padding:40px 16px}
+h1{font-size:24px;margin:0 0 6px}
+p{color:var(--muted);margin:0 0 18px}
+#drop{display:block;border:2px dashed var(--line);border-radius:12px;background:var(--panel);padding:36px 16px;text-align:center;cursor:pointer}
+#drop.over{border-color:var(--accent)}
+#drop strong{color:var(--accent)}
+#result{margin-top:20px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px}
+#result[hidden]{display:none}
+#result h2{margin:0 0 8px;font-size:18px}
+.ok{color:var(--ok)}.bad{color:var(--bad)}
+dl{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;margin:10px 0 0}
+dt{color:var(--muted)}dd{margin:0;word-break:break-all}
+code{font-size:12px}
+a{color:var(--accent)}
+.credit{font-size:13px;color:var(--muted);margin-top:28px}
+</style>
+</head>
+<body>
+<main>
+  <h1>Verify a signed PDF</h1>
+  <p>Drop a PDF that was signed with <a href="/" data-app="name">LL PDF</a>. This checks that it is exactly the file that was signed and that its audit trail is intact. The file stays on your computer: only its fingerprint (a SHA-256 hash) is checked. <a href="/esign">What a match shows, and what it does not prove</a>.</p>
+  <label id="drop"><input type="file" id="file" accept="application/pdf,.pdf" hidden><strong>Choose a PDF</strong> or drop it here</label>
+  <div id="result" hidden></div>
+  <p class="credit" data-credit></p>
+</main>
+<script>
+'use strict';
+const $ = s => document.querySelector(s);
+const fmt = iso => iso ? new Date(iso).toLocaleString() + ' (' + iso.replace('T', ' ').replace(/\.\d+Z$/, ' UTC') + ')' : '';
+async function check(file) {
+  const out = $('#result'); out.hidden = false; out.textContent = 'Checking...';
+  const buf = await file.arrayBuffer();
+  const hash = [...new Uint8Array(await crypto.subtle.digest('SHA-256', buf))].map(b => b.toString(16).padStart(2, '0')).join('');
+  let r;
+  try { r = await (await fetch('/api/verify/' + hash)).json(); }
+  catch { out.innerHTML = '<h2 class="bad">Could not reach the server</h2><p>Check your connection and try again.</p>'; return; }
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
+  if (!r.found) {
+    out.innerHTML = `<h2 class="bad">No match</h2><p>This file does not match any completed signing. It may have been changed after signing (even re-saving it changes the fingerprint), or it was not signed with ${esc(APP.name)}.</p><dl><dt>File</dt><dd>${esc(file.name)}</dd><dt>SHA-256</dt><dd><code>${hash}</code></dd></dl>`;
+    return;
+  }
+  out.innerHTML = `<h2 class="${r.auditIntact ? 'ok' : 'bad'}">${r.auditIntact ? '✔ Verified: this is the exact signed file' : 'File matches, but the audit trail failed its integrity check'}</h2>
+    <dl><dt>File</dt><dd>${esc(file.name)}</dd>
+    <dt>Request ID</dt><dd><code>${esc(r.envelope)}</code></dd>
+    <dt>Sent</dt><dd>${esc(fmt(r.createdAt))}</dd>
+    <dt>Completed</dt><dd>${esc(fmt(r.completedAt))}</dd>
+    ${r.signers.map(s => `<dt>Signer ${s.signer}</dt><dd>signed ${esc(fmt(s.signedAt))}</dd>`).join('')}
+    <dt>Audit trail</dt><dd>${r.auditIntact ? `${r.events} events, hash chain and server signatures intact` : 'integrity check FAILED'}</dd>
+    <dt>SHA-256</dt><dd><code>${hash}</code></dd></dl>
+    <p style="margin-top:12px">Names and full details are on the Signature Certificate page at the end of the PDF.</p>`;
+}
+$('#file').onchange = e => e.target.files[0] && check(e.target.files[0]);
+const drop = $('#drop');
+addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('over'); });
+addEventListener('dragleave', () => drop.classList.remove('over'));
+addEventListener('drop', e => { e.preventDefault(); drop.classList.remove('over'); const f = e.dataTransfer.files[0]; if (f) check(f); });
+</script>
+</body>
+</html>

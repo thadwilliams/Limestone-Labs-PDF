@@ -1,0 +1,6 @@
+# keep binary vendor files byte-for-byte on every platform
+*.traineddata binary
+*.pfb binary
+*.ttf binary
+*.png binary
+*.pdf binary

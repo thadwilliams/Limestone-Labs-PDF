@@ -1,0 +1,26 @@
+{
+  "name": "ll-pdf",
+  "private": true,
+  "description": "Free, self-hostable PDF editor with encrypted e-signing",
+  "license": "Apache-2.0",
+  "author": "Limestone Labs LLC (https://limestonelabs.cc)",
+  "repository": "github:thadwilliams/LL_PDF",
+  "homepage": "https://pdf.limestonelabs.cc",
+  "type": "module",
+  "scripts": {
+    "brand": "node scripts/setup.mjs --brand-only",
+    "setup": "node scripts/setup.mjs",
+    "deploy": "node scripts/setup.mjs --brand-only && wrangler deploy",
+    "dev": "node scripts/setup.mjs --dev-vars && wrangler dev --local",
+    "test:e2e": "node tests/e2e/signing.cjs",
+    "test:tools": "node tests/e2e/tools.cjs"
+  },
+  "devDependencies": {
+    "pdf-lib": "1.17.1",
+    "playwright": "1.56",
+    "wrangler": "4.151.3"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

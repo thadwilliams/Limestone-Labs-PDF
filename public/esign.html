@@ -1,0 +1,39 @@
+<!doctype html>
+<!-- Copyright 2026 Limestone Labs LLC. SPDX-License-Identifier: Apache-2.0 -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>E-Signing Explained</title>
+<meta name="description" content="What this PDF editor records when people sign electronically, what that record shows, what it does not prove, and what it means for you.">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<script src="config.js"></script>
+<script src="brand.js"></script>
+<style>
+:root{--bg:#e9ebee;--panel:#fff;--ink:#1d2129;--muted:#667085;--line:#d0d5dd;--accent:#2563eb}
+@media (prefers-color-scheme: dark){:root{--bg:#1b1d21;--panel:#26292e;--ink:#e6e8eb;--muted:#9aa1ab;--line:#3a3f46;--accent:#5b8cff}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 system-ui,"Segoe UI",sans-serif}
+main{max-width:720px;margin:0 auto;padding:36px 16px 60px}
+h1{font-size:26px;margin:0 0 6px}
+.lede{color:var(--muted);margin:0 0 20px}
+#info{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:6px 22px 14px}
+h4{font-size:17px;margin:18px 0 6px}
+ul{margin:0;padding-left:20px}
+li{margin:5px 0}
+a{color:var(--accent)}
+.credit{font-size:13px;color:var(--muted);margin-top:28px}
+</style>
+</head>
+<body>
+<main>
+  <h1>E-signing, explained</h1>
+  <p class="lede">What <a href="/" data-app="name">LL PDF</a> records when people sign electronically, what that record shows, what it does not prove, and what it means for you. You can check a signed file at <a href="/verify"><span data-app="domain">pdf.limestonelabs.cc</span>/verify</a>.</p>
+  <div id="info"></div>
+  <p class="credit" data-credit></p>
+</main>
+<script src="esign-info.js"></script>
+<script>renderEsignInfo(document.getElementById('info'));</script>
+</body>
+</html>

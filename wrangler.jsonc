@@ -1,0 +1,27 @@
+{
+  "name": "pdf-editor",
+  "main": "src/worker.js",
+  "compatibility_date": "2026-10-12",
+  // The editor is static; the Worker only handles /api/* (signing requests).
+  "assets": {
+    "directory": "public",
+    "binding": "ASSETS"
+  },
+  "routes": [
+    {"pattern": "pdf.limestonelabs.cc", "custom_domain": true}
+  ],
+  // One SQLite-backed Durable Object per signing request (free plan; no database count limit).
+  "durable_objects": {
+    "bindings": [{"name": "ENVELOPE", "class_name": "Envelope"}]
+  },
+  "migrations": [
+    {"tag": "v1", "new_sqlite_classes": ["Envelope"]}
+  ],
+  // Encrypted documents only; the key never reaches the server.
+  "r2_buckets": [
+    {"binding": "DOCS", "bucket_name": "pdfsign-docs"}
+  ],
+  "observability": {"enabled": true}
+  // Secrets: TOKEN_SECRET (signs signer sessions), AUDIT_SECRET (signs audit events).
+  //   wrangler secret put TOKEN_SECRET / AUDIT_SECRET; locally they come from .dev.vars
+}

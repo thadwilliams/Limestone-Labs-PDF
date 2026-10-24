@@ -1,0 +1,17 @@
+{
+  "routes": [
+    {
+      "route": "/verify",
+      "rewrite": "/verify.html"
+    },
+    {
+      "route": "/esign",
+      "rewrite": "/esign.html"
+    }
+  ],
+  "mimeTypes": {
+    ".webmanifest": "application/manifest+json",
+    ".traineddata": "application/octet-stream",
+    ".pfb": "application/octet-stream"
+  }
+}
